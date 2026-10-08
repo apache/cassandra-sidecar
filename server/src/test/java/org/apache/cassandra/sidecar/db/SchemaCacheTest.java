@@ -27,7 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import com.datastax.driver.core.BoundStatement;
+import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
@@ -50,6 +52,7 @@ import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableExcept
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -68,7 +71,6 @@ class SchemaCacheTest
     CQLSessionProvider sessionProvider;
     Session session;
     SchemaCache schemaCache;
-    // the rows Cassandra is mocked to return, mutable so that a test can simulate schema changes between refreshes
     List<Map<String, String>> tableRows;
     List<Map<String, String>> keyspaceRows;
 
@@ -90,7 +92,6 @@ class SchemaCacheTest
     @Test
     void testImmediateUnsupportedTableSchemaLookup()
     {
-        // the cache is populated upon the first lookup, when the periodic refresh has not run yet
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo(SCHEMA);
         assertThat(schemaCache.getUnsupportedTableSchema(KEYSPACE, TABLE)).isEqualTo(SCHEMA);
 
@@ -101,16 +102,13 @@ class SchemaCacheTest
     @Test
     void testUnsupportedTableSchemaLookupWithoutRefresh()
     {
-        // the cache is populated upon the first lookup, no matter whether the lookup allows a refresh
         assertThat(schemaCache.getUnsupportedTableSchema(KEYSPACE, TABLE, false)).isEqualTo(SCHEMA);
 
-        // a table missing from the cache is not described when the lookup does not allow a refresh, so a table
-        // created after the last refresh is reported as non-existent
+        // for a table created after the last refresh
         Name table = new Name("table2");
         assertThat(schemaCache.getUnsupportedTableSchema(KEYSPACE, table, false)).isNull();
         verify(session, never()).execute("DESCRIBE TABLE keyspace1.table2");
 
-        // while it is described when the lookup allows a refresh
         mockDescribeTable(session, KEYSPACE.name(), table.name(), "CREATE TABLE keyspace1.table2 (a int PRIMARY KEY);");
         assertThat(schemaCache.getUnsupportedTableSchema(KEYSPACE, table, true))
         .isEqualTo("CREATE TABLE keyspace1.table2 (a int PRIMARY KEY);");
@@ -118,9 +116,27 @@ class SchemaCacheTest
     }
 
     @Test
+    void testUnsupportedTableSchemaLookupForUnquotedNames()
+    {
+        assertThat(schemaCache.getUnsupportedTableSchema(new Name("Keyspace1"),
+                                                         new Name("TABLE1"),
+                                                         false))
+        .isEqualTo(SCHEMA);
+
+        assertThat(schemaCache.getUnsupportedTableSchema(new Name("\"Keyspace1\""),
+                                                         new Name("\"Table1\""),
+                                                         false))
+        .isNull();
+
+        assertThat(schemaCache.getUnsupportedTableSchema(new Name("\"keyspace1\""),
+                                                         new Name("\"table1\""),
+                                                         false))
+        .isEqualTo(SCHEMA);
+    }
+
+    @Test
     void testUnsupportedTableSchemaLookupAfterRefresh()
     {
-        // mark cache as initialized, but effectively empty
         schemaCache.setInitialized(true);
 
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo("");
@@ -130,7 +146,6 @@ class SchemaCacheTest
         Future<Void> future = p.future();
         assertThat(future.succeeded()).isTrue();
 
-        // simulate Cassandra unavailability to verify data is taken from cache
         when(sessionProvider.get()).thenThrow(new CassandraUnavailableException(CQL, "CQL unavailable"));
 
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo(SCHEMA);
@@ -140,12 +155,12 @@ class SchemaCacheTest
     @Test
     void testUnsupportedTableSchemaIsAssembledInStableOrder()
     {
-        // the tables are queried into a set, so the cache has to keep them sorted for the assembled schema
-        // to be repeatable
         String otherSchema = "CREATE TABLE keyspace1.table0 (a int, b vector<float, 3>, PRIMARY KEY (a));";
         mockDescribeTable(session, KEYSPACE.name(), "table0", otherSchema);
         tableRows.add(Map.of("keyspace_name", KEYSPACE.name(), "table_name", "table0"));
 
+        assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo(otherSchema + "\n\n" + SCHEMA);
+        schemaCache.refresh(false);
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo(otherSchema + "\n\n" + SCHEMA);
     }
 
@@ -153,12 +168,8 @@ class SchemaCacheTest
     void testDroppedTableIsRemovedOnRefresh()
     {
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo(SCHEMA);
-
-        // the table is dropped, so Cassandra no longer lists it
         tableRows.clear();
         schemaCache.refresh(false);
-
-        // the cache is replaced on every refresh, therefore the dropped table is gone
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo("");
         assertThat(schemaCache.getUnsupportedTableSchema(KEYSPACE, TABLE, false)).isNull();
     }
@@ -166,102 +177,86 @@ class SchemaCacheTest
     @Test
     void testTableKnownToDriverIsNotCached()
     {
-        // the table is parseable by the Java driver, hence it is served from driver metadata and not cached here
-        when(session.getCluster().getMetadata().getKeyspaces())
-        .thenReturn(List.of(mockKeyspaceMetadata(KEYSPACE.name(), TABLE.name())));
+        Cluster mockCluster = mock(Cluster.class);
+        when(session.getCluster()).thenReturn(mockCluster);
+        Metadata mockMetadata = mock(Metadata.class);
+        when(mockCluster.getMetadata()).thenReturn(mockMetadata);
+        doReturn(List.of(mockKeyspaceMetadata(KEYSPACE.name(), TABLE.name()))).when(mockMetadata).getKeyspaces();
 
         assertThat(schemaCache.getUnsupportedTableSchema()).isEqualTo("");
         assertThat(schemaCache.getUnsupportedTableSchema(KEYSPACE, TABLE, false)).isNull();
     }
 
     @Test
-    void testImmediateDescribedSchemaLookup()
+    void testImmediateDescribeSchemaLookup()
     {
-        assertThat(schemaCache.getSchema()).isEqualTo(KEYSPACE_SCHEMA);
+        assertThat(schemaCache.getFullSchema()).isEqualTo(KEYSPACE_SCHEMA);
         assertThat(schemaCache.getKeyspaceSchema(KEYSPACE.name())).isEqualTo(KEYSPACE_SCHEMA);
         assertThat(schemaCache.getKeyspaceSchema("unknown")).isNull();
 
-        // the keyspace is described once, during the refresh triggered by the first lookup, and served from
-        // the cache afterwards
         verify(session, times(1)).execute("DESCRIBE KEYSPACE " + KEYSPACE.name());
     }
 
     @Test
-    void testDescribedSchemaLookupOnDemand()
+    void testDescribeSchemaLookupOnDemand()
     {
-        // mark cache as initialized, but effectively empty
         schemaCache.setInitialized(true);
-        assertThat(schemaCache.getSchema()).isEqualTo("");
+        assertThat(schemaCache.getFullSchema()).isEqualTo("");
 
-        // keyspace may have been created after the last refresh, its schema is described on lookup and cached
         assertThat(schemaCache.getKeyspaceSchema(KEYSPACE.name())).isEqualTo(KEYSPACE_SCHEMA);
         assertThat(schemaCache.getKeyspaceSchema(KEYSPACE.name())).isEqualTo(KEYSPACE_SCHEMA);
         verify(session, times(1)).execute("DESCRIBE KEYSPACE " + KEYSPACE.name());
 
-        // simulate Cassandra unavailability to verify data is taken from cache
         when(sessionProvider.get()).thenThrow(new CassandraUnavailableException(CQL, "CQL unavailable"));
 
-        // the schema of all keyspaces is assembled again, because the keyspace has been added to the cache
-        assertThat(schemaCache.getSchema()).isEqualTo(KEYSPACE_SCHEMA);
+        assertThat(schemaCache.getFullSchema()).isEqualTo(KEYSPACE_SCHEMA);
         assertThat(schemaCache.getKeyspaceSchema(KEYSPACE.name())).isEqualTo(KEYSPACE_SCHEMA);
     }
 
     @Test
-    void testDescribedSchemaOfAllKeyspacesIsCached()
+    void testDescribeSchemaOfAllKeyspacesIsInvalidatedOnDemandLookup()
     {
-        // the schema of all keyspaces is assembled during refresh, and it is served from the cache afterwards
-        assertThat(schemaCache.getSchema()).isSameAs(schemaCache.getSchema());
-        assertThat(schemaCache.getSchema()).isEqualTo(KEYSPACE_SCHEMA);
-    }
+        assertThat(schemaCache.getFullSchema()).isEqualTo(KEYSPACE_SCHEMA);
 
-    @Test
-    void testDescribedSchemaOfAllKeyspacesIsInvalidatedOnDemandLookup()
-    {
-        assertThat(schemaCache.getSchema()).isEqualTo(KEYSPACE_SCHEMA);
-
-        // a keyspace created after the last refresh is described on lookup, which invalidates the schema of
-        // all keyspaces, so that the new keyspace is included when it is assembled again
         String otherSchema = "CREATE TABLE keyspace2.table1 (a int PRIMARY KEY);";
         mockDescribeKeyspace(session, "keyspace2", otherSchema);
 
         assertThat(schemaCache.getKeyspaceSchema("keyspace2")).isEqualTo(keyspaceSchema("keyspace2", otherSchema));
-        assertThat(schemaCache.getSchema())
+        assertThat(schemaCache.getFullSchema())
         .isEqualTo(KEYSPACE_SCHEMA + "\n\n" + keyspaceSchema("keyspace2", otherSchema));
     }
 
     @Test
-    void testDescribedSchemaIsAssembledInStableOrder()
+    void testDescribeSchemaIsAssembledInStableOrder()
     {
-        // the keyspaces are queried into a set, so the cache has to keep them sorted for the assembled schema
-        // to be repeatable
         String otherSchema = "CREATE TABLE aaa_keyspace.table1 (a int PRIMARY KEY);";
         mockDescribeKeyspace(session, "aaa_keyspace", otherSchema);
         keyspaceRows.add(Map.of("keyspace_name", "aaa_keyspace"));
 
-        assertThat(schemaCache.getSchema())
+        assertThat(schemaCache.getFullSchema())
+        .isEqualTo(keyspaceSchema("aaa_keyspace", otherSchema) + "\n\n" + KEYSPACE_SCHEMA);
+        schemaCache.refresh(false);
+        assertThat(schemaCache.getFullSchema())
         .isEqualTo(keyspaceSchema("aaa_keyspace", otherSchema) + "\n\n" + KEYSPACE_SCHEMA);
     }
 
     @Test
     void testDroppedKeyspaceIsRemovedOnRefresh()
     {
-        assertThat(schemaCache.getSchema()).isEqualTo(KEYSPACE_SCHEMA);
+        assertThat(schemaCache.getFullSchema()).isEqualTo(KEYSPACE_SCHEMA);
 
-        // the keyspace is dropped, so Cassandra no longer lists it
         keyspaceRows.clear();
         schemaCache.refresh(false);
 
-        // the cache is replaced on every refresh, therefore the dropped keyspace is gone
-        assertThat(schemaCache.getSchema()).isEqualTo("");
+        assertThat(schemaCache.getFullSchema()).isEqualTo("");
     }
 
     @Test
     void testKeyspaceWithoutSchemaIsNotCached()
     {
-        // Cassandra renders no statement for some keyspaces, such as the virtual ones
         keyspaceRows.add(Map.of("keyspace_name", VIRTUAL_KEYSPACE));
 
-        assertThat(schemaCache.getSchema()).isEqualTo(KEYSPACE_SCHEMA);
+        assertThat(schemaCache.getFullSchema()).isEqualTo(KEYSPACE_SCHEMA);
         assertThat(schemaCache.getKeyspaceSchema(VIRTUAL_KEYSPACE)).isNull();
     }
 
@@ -272,17 +267,14 @@ class SchemaCacheTest
         when(unavailable.get()).thenThrow(new CassandraUnavailableException(CQL, "CQL unavailable"));
         SchemaCache cache = new SchemaCache(mockSidecarConfiguration(), unavailable);
 
-        // the cache remains uninitialized, and the schema assembled from it is empty
-        assertThat(cache.getSchema()).isEqualTo("");
+        assertThat(cache.getFullSchema()).isEqualTo("");
         assertThat(cache.getUnsupportedTableSchema()).isEqualTo("");
 
-        // a lookup missing from the cache queries Cassandra, so the unavailability is reported to the caller
         assertThatThrownBy(() -> cache.getKeyspaceSchema(KEYSPACE.name()))
         .isInstanceOf(CassandraUnavailableException.class);
         assertThatThrownBy(() -> cache.getUnsupportedTableSchema(KEYSPACE, TABLE))
         .isInstanceOf(CassandraUnavailableException.class);
 
-        // unless the lookup does not allow a refresh
         assertThat(cache.getUnsupportedTableSchema(KEYSPACE, TABLE, false)).isNull();
     }
 
@@ -301,18 +293,11 @@ class SchemaCacheTest
     }
 
     @Test
-    void testDelayIsTakenFromConfiguration()
-    {
-        assertThat(schemaCache.delay()).isEqualTo(new SecondBoundConfiguration(5, TimeUnit.SECONDS));
-    }
-
-    @Test
     void testConcatSchemas()
     {
         assertThat(SchemaCache.concatSchemas()).isEqualTo("");
         assertThat(SchemaCache.concatSchemas("", null)).isEqualTo("");
         assertThat(SchemaCache.concatSchemas(SCHEMA)).isEqualTo(SCHEMA);
-        // blank schemas are skipped, and the remaining ones are separated with an empty line
         assertThat(SchemaCache.concatSchemas(KEYSPACE_SCHEMA, null, "", "\n" + SCHEMA + "\n"))
         .isEqualTo(KEYSPACE_SCHEMA + "\n\n" + SCHEMA);
     }
@@ -335,38 +320,26 @@ class SchemaCacheTest
         when(session.execute(eq(boundStatement))).then(invocation -> mockResultSet(rows));
     }
 
-    /**
-     * Stubs a statement Cassandra is mocked to answer with the given rows. The rows are read when the statement is
-     * executed, so that the caller can modify them between two executions.
-     *
-     * @param session   the mocked session
-     * @param statement the statement to stub
-     * @param rows      the rows to return, keyed by column name
-     */
-    static void mockQuery(Session session, String statement, List<Map<String, String>> rows)
-    {
-        when(session.execute(eq(statement))).then(invocation -> mockResultSet(rows));
-    }
-
     static void mockDescribeKeyspace(Session session, String keyspace, String schema)
     {
-        // DESCRIBE KEYSPACE renders the keyspace and every object it contains, one statement per row
-        mockQuery(session, "DESCRIBE KEYSPACE " + keyspace,
+        mockQuery(session,
+                  "DESCRIBE KEYSPACE " + keyspace,
                   List.of(Map.of("create_statement", createKeyspaceStatement(keyspace)),
                           Map.of("create_statement", schema)));
     }
 
     static void mockDescribeTable(Session session, String keyspace, String table, String schema)
     {
-        mockQuery(session, String.format("DESCRIBE TABLE %s.%s", keyspace, table),
+        mockQuery(session,
+                  String.format("DESCRIBE TABLE %s.%s", keyspace, table),
                   List.of(Map.of("create_statement", schema)));
     }
 
-    /**
-     * @param keyspace the keyspace the Java driver is mocked to know
-     * @param table    the single table of the keyspace the Java driver is mocked to know
-     * @return the mocked driver metadata of the keyspace
-     */
+    static void mockQuery(Session session, String statement, List<Map<String, String>> rows)
+    {
+        when(session.execute(eq(statement))).then(invocation -> mockResultSet(rows));
+    }
+
     static KeyspaceMetadata mockKeyspaceMetadata(String keyspace, String table)
     {
         TableMetadata tableMetadata = mock(TableMetadata.class);

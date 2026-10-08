@@ -85,7 +85,7 @@ class SchemaHandlerTest
         ClassLoader cl = getClass().getClassLoader();
         testKeyspaceSchema = IOUtils.readFully(cl.getResourceAsStream("schema/test_keyspace_schema.cql"));
         mockSchemaCache = mock(SchemaCache.class);
-        when(mockSchemaCache.getSchema()).thenReturn("MOCK SCHEMA");
+        when(mockSchemaCache.getFullSchema()).thenReturn("MOCK SCHEMA");
         when(mockSchemaCache.getKeyspaceSchema(TEST_KEYSPACE)).thenReturn(testKeyspaceSchema);
 
         Injector injector;
@@ -132,8 +132,7 @@ class SchemaHandlerTest
     @Test
     void testSchemaNotAvailable(VertxTestContext context)
     {
-        // the cache serves an empty schema when it could not read it from Cassandra at least once
-        when(mockSchemaCache.getSchema()).thenReturn("");
+        when(mockSchemaCache.getFullSchema()).thenReturn("");
 
         WebClient client = WebClient.create(vertx);
         String testRoute = "/api/v1/schema/keyspaces";
@@ -165,8 +164,6 @@ class SchemaHandlerTest
     @Test
     void testKeyspaceSchemaNotAvailable(VertxTestContext context)
     {
-        // keyspace is known to Java driver, but Cassandra did not describe it, for example because it
-        // has been dropped in the meanwhile
         when(mockSchemaCache.getKeyspaceSchema(TEST_KEYSPACE)).thenReturn(null);
 
         WebClient client = WebClient.create(vertx);

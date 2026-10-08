@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.db;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentNavigableMap;
@@ -53,17 +54,11 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.VisibleForTesting;
 
 /**
- * The {@link SchemaCache} class maintains cache of CQL schema read from Cassandra with server side
- * {@code DESCRIBE} statements. It holds three kinds of schema:
- * <ul>
- *     <li>The complete schema of every keyspace, as rendered by Cassandra itself, and the schema of all keyspaces
- *     assembled from it. It is the schema served by the schema routes, and it is preferred over the schema rendered
- *     by Java driver, which drops the objects it cannot parse and renders only a fixed subset of the keyspace and
- *     table options. It also stores driver unparseable table level schemas, it is used for table existence checks.</li>
- * </ul>
- * Cache is refreshed for the first time as soon as CQL connection is established or upon first lookup.
- * Later, it is periodically refreshed according to configured schedule, therefore schema changes applied after the
- * last refresh are not visible, except for keyspaces which are looked up for the first time.
+ * The {@link SchemaCache} class maintains cache of keyspace, table schemas read through {@code DESCRIBE} call. Schema
+ * provided by Java driver could be partial as it drops objects it cannot parse. It also stores driver unparseable
+ * table level schemas, used for table existence checks.
+ * <p>
+ * Cache is regularly refreshed, but schema changes applied between refreshes are may not be immediately visible
  */
 @Singleton
 public class SchemaCache implements PeriodicTask
@@ -78,10 +73,8 @@ public class SchemaCache implements PeriodicTask
     // Caches table schemas those that could not be parsed by Java driver
     private volatile ConcurrentNavigableMap<QualifiedTableName, String> unsupportedTableSchemaCache;
     private volatile ConcurrentNavigableMap<String, String> keyspaceSchemaCache;
-    // CQL schema of all keyspaces, assembled from keyspaceSchemaCache once and not on every request
-    // it is invalidated whenever the schema of a keyspace is added to keyspaceSchemaCache
+    // CQL schema of all keyspaces. It is invalidated whenever the schema of a keyspace is added to keyspaceSchemaCache
     private final AtomicReference<String> fullSchemaCache = new AtomicReference<>();
-    // flag indicating whether cache has been populated at least once
     private volatile boolean initialized;
 
     private PreparedStatement tableListStatement;
@@ -97,11 +90,11 @@ public class SchemaCache implements PeriodicTask
     }
 
     /**
-     * @return CQL schema of all keyspaces, as rendered by Cassandra. Keyspaces created after the last cache refresh
-     * are not included, unless their schema has been looked up individually in the meanwhile, so results may be stale.
+     * @return CQL schema of all keyspaces. Keyspaces created after the last cache refresh are not included, unless
+     * their schema has been looked up individually in the meanwhile, so results may be stale.
      */
     @NotNull
-    public String getSchema()
+    public String getFullSchema()
     {
         refreshIfUninitialized();
         String fullSchema = fullSchemaCache.get();
@@ -116,10 +109,8 @@ public class SchemaCache implements PeriodicTask
     }
 
     /**
-     * @param keyspace the unquoted keyspace name, as stored by Cassandra
-     * @return CQL schema of the keyspace, as rendered by Cassandra, {@code null} when the keyspace does not exist or
-     * its schema could not be read. If the keyspace was updated after last refresh, results maybe stale until next
-     * refresh.
+     * @return CQL schema of the keyspace, {@code null} when the keyspace does not exist. If the keyspace was updated
+     * after last refresh, results maybe stale until next refresh.
      */
     @Nullable
     public String getKeyspaceSchema(@NotNull String keyspace)
@@ -168,7 +159,8 @@ public class SchemaCache implements PeriodicTask
     public String getUnsupportedTableSchema(@NotNull Name keyspace, @NotNull Name table, boolean allowRefresh)
     {
         refreshIfUninitialized();
-        QualifiedTableName name = new QualifiedTableName(keyspace, table);
+        // the cache is keyed by the names as stored by Cassandra
+        QualifiedTableName name = new QualifiedTableName(foldIfUnquoted(keyspace), foldIfUnquoted(table));
         String schema = unsupportedTableSchemaCache.get(name);
         if (schema == null && allowRefresh)
         {
@@ -212,7 +204,6 @@ public class SchemaCache implements PeriodicTask
     {
         if (initialized && initializeOnly)
         {
-            // cache has been already initialized, early exit
             return;
         }
         try
@@ -222,7 +213,6 @@ public class SchemaCache implements PeriodicTask
 
             Set<QualifiedTableName> tables = queryAllTables(session);
             Set<QualifiedTableName> driverKnownTables = driverKnownTables(session);
-
             tables.removeAll(driverKnownTables);
 
             ConcurrentNavigableMap<QualifiedTableName, String> newTableSchemaCache = createTableSchemaCache();
@@ -231,7 +221,6 @@ public class SchemaCache implements PeriodicTask
                 LOGGER.debug("Tables not supported by Java driver metadata: {}", tables);
                 tables.forEach(table -> populateTableSchemaCache(newTableSchemaCache, table));
             }
-            // replacing cache, because some tables might have been removed in the meanwhile
             unsupportedTableSchemaCache = newTableSchemaCache;
 
             ConcurrentNavigableMap<String, String> newKeyspaceSchemaCache = createKeyspaceSchemaCache();
@@ -239,23 +228,19 @@ public class SchemaCache implements PeriodicTask
             {
                 populateKeyspaceSchemaCache(newKeyspaceSchemaCache, keyspace.name());
             }
-            // replacing cache, because some keyspaces might have been dropped in the meanwhile
             keyspaceSchemaCache = newKeyspaceSchemaCache;
             fullSchemaCache.set(assembleFullSchema(newKeyspaceSchemaCache));
-
             initialized = true;
         }
         catch (CassandraUnavailableException ignored)
         {
-            LOGGER.debug("Not yet connected to Cassandra cluster");
+            LOGGER.debug("Error refreshing SchemaCache, not yet connected to Cassandra");
         }
     }
 
     @Nullable
     private String populateKeyspaceSchemaCache(Map<String, String> cache, String keyspace)
     {
-        // Cassandra stores the keyspace name unquoted, while DESCRIBE requires it to be quoted
-        // when the name is case sensitive or a reserved keyword
         List<String> cqlSchema = schemaAccessor.getKeyspaceSchema(new Name(Metadata.quoteIfNecessary(keyspace)));
         if (cqlSchema == null || cqlSchema.isEmpty())
         {
@@ -263,8 +248,6 @@ public class SchemaCache implements PeriodicTask
         }
         String schema = String.join(STATEMENT_DELIMITER, cqlSchema);
         cache.put(keyspace, schema);
-        // the schema of all keyspaces has to be assembled again, note that a cache refresh assembles it
-        // eagerly, right after it has populated the schema of every keyspace
         fullSchemaCache.set(null);
         return schema;
     }
@@ -287,7 +270,10 @@ public class SchemaCache implements PeriodicTask
         {
             throw new IllegalArgumentException("Invalid table name: " + table);
         }
-        List<String> cqlSchema = schemaAccessor.getTableSchema(keyspaceName, tableName);
+        // Cassandra stores the names unquoted, while DESCRIBE requires them to be quoted when the name is case
+        // sensitive or a reserved keyword
+        List<String> cqlSchema = schemaAccessor.getTableSchema(new Name(Metadata.quoteIfNecessary(keyspaceName.name())),
+                                                               new Name(Metadata.quoteIfNecessary(tableName.name())));
         if (cqlSchema != null)
         {
             String schema = String.join(STATEMENT_DELIMITER, cqlSchema);
@@ -328,17 +314,24 @@ public class SchemaCache implements PeriodicTask
         }
     }
 
+    /**
+     * Normalizes a name obtained from a request into the form Cassandra stores it in: CQL folds unquoted
+     * names to lowercase, while quoted names keep their case.
+     */
+    private static String foldIfUnquoted(Name name)
+    {
+        return name.isSourceQuoted() ? name.name() : name.name().toLowerCase(Locale.ROOT);
+    }
+
     private ConcurrentNavigableMap<QualifiedTableName, String> createTableSchemaCache()
     {
-        // sorted for repeatable results when the schema of the unsupported tables is assembled, and concurrent,
-        // because different threads may add items to the map using getTableSchema() method while it is iterated
+        // uses ConcurrentSkipListMap to have assembled full schema or table schemas consistent across calls
         return new ConcurrentSkipListMap<>(Comparator.comparing(QualifiedTableName::toString));
     }
 
     private ConcurrentNavigableMap<String, String> createKeyspaceSchemaCache()
     {
-        // sorted for repeatable results when the schema of all keyspaces is assembled, and concurrent, because
-        // different threads may add items to the map using getKeyspaceSchema() method while it is iterated
+        // uses ConcurrentSkipListMap to have assembled full schema or table schemas consistent across calls
         return new ConcurrentSkipListMap<>();
     }
 

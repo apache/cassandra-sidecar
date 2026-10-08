@@ -86,8 +86,8 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                                Name keyspace)
     {
         describeSchema(host, keyspace)
-                     .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace))
-                     .onSuccess(context::json);
+        .onSuccess(context::json)
+        .onFailure(cause -> processFailure(cause, context, host, remoteAddress, keyspace));
     }
 
     private Future<SchemaResponse> describeSchema(String host, Name keyspace)
@@ -96,11 +96,9 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                             .executeBlocking(() -> {
                                 if (keyspace == null)
                                 {
-                                    String schema = schemaCache.getSchema();
+                                    String schema = schemaCache.getFullSchema();
                                     if (schema.isEmpty())
                                     {
-                                        // the cache serves an empty schema when it could not read it from Cassandra
-                                        // at least once, a reachable Cassandra always describes its system keyspaces
                                         throw schemaNotAvailable();
                                     }
                                     return new SchemaResponse(schema);
@@ -109,7 +107,6 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
                                 String keyspaceSchema = schemaCache.getKeyspaceSchema(resolveKeyspace(host, keyspace));
                                 if (keyspaceSchema == null)
                                 {
-                                    // keyspace has been dropped after its name was resolved
                                     throw keyspaceDoesNotExist(keyspace);
                                 }
                                 return new SchemaResponse(keyspace.name(), keyspaceSchema);
@@ -117,17 +114,10 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
     }
 
     /**
-     * Resolves the keyspace name as stored by Cassandra, which is what the {@code SchemaCache} is keyed by. Java driver
-     * {@link Metadata metadata} is used for the lookup, because it folds the case of unquoted names.
-     *
-     * @param host     the Cassandra instance host
-     * @param keyspace the keyspace parsed from the request
-     * @return the keyspace name as stored by Cassandra
-     * @throws HttpException when the keyspace does not exist
+     * Checks keyspace exists and resolves to String stored in
      */
     private String resolveKeyspace(String host, Name keyspace)
     {
-        // metadata can block so we need to run in a blocking thread
         Metadata metadata = metadataFetcher.delegate(host).metadata();
         KeyspaceMetadata ksMetadata = MetadataUtils.keyspace(metadata, keyspace);
         if (ksMetadata == null)
@@ -139,7 +129,7 @@ public class KeyspaceSchemaHandler extends AbstractHandler<Name> implements Acce
 
     private HttpException keyspaceDoesNotExist(Name keyspace)
     {
-        String errorMessage = String.format("Keyspace '%s' does not exist.", keyspace);
+        String errorMessage = String.format("Keyspace '%s' does not exist.", keyspace.name());
         return wrapHttpException(HttpResponseStatus.NOT_FOUND, errorMessage);
     }
 

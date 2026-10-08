@@ -264,7 +264,7 @@ public class TestModule extends AbstractModule
         SchemaCache mock = mock(SchemaCache.class);
         when(mock.getUnsupportedTableSchema()).thenReturn("");
         when(mock.getKeyspaceSchema(any())).thenReturn("");
-        when(mock.getSchema()).thenReturn("");
+        when(mock.getFullSchema()).thenReturn("");
         return mock;
     }
 }

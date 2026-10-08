@@ -41,7 +41,7 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
@@ -72,7 +72,7 @@ class CassandraClusterSchemaMonitorTest
     private CassandraClusterSchemaMonitor clusterSchema;
     private InstanceMetadataFetcher mockInstanceFetcher;
     private CdcDatabaseAccessor mockDatabaseAccessor;
-    private DriverUnsupportedSchemaCache mockDriverUnsupportedSchemaCache;
+    private SchemaCache mockSchemaCache;
     private SidecarConfiguration mockSidecarConfiguration;
     private ServiceConfiguration mockServiceConfiguration;
     private CdcConfiguration mockCdcConfiguration;
@@ -102,7 +102,7 @@ class CassandraClusterSchemaMonitorTest
     {
         mockInstanceFetcher = mock(InstanceMetadataFetcher.class);
         mockDatabaseAccessor = mock(CdcDatabaseAccessor.class);
-        mockDriverUnsupportedSchemaCache = mock(DriverUnsupportedSchemaCache.class);
+        mockSchemaCache = mock(SchemaCache.class);
         mockSidecarConfiguration = mock(SidecarConfiguration.class);
         mockServiceConfiguration = mock(ServiceConfiguration.class);
         mockCdcConfiguration = mock(CdcConfiguration.class);
@@ -131,7 +131,7 @@ class CassandraClusterSchemaMonitorTest
 
         // Setup database accessor
         when(mockDatabaseAccessor.fullSchema()).thenReturn(INITIAL_SCHEMA);
-        when(mockDriverUnsupportedSchemaCache.getFullSchema()).thenReturn("");
+        when(mockSchemaCache.getFullSchema()).thenReturn("");
         when(mockDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(mockDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
         when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
@@ -139,7 +139,7 @@ class CassandraClusterSchemaMonitorTest
         clusterSchema = new CassandraClusterSchemaMonitor(
         mockInstanceFetcher,
         mockDatabaseAccessor,
-        mockDriverUnsupportedSchemaCache,
+        mockSchemaCache,
         mockSidecarConfiguration,
         mockCassandraBridgeFactory
         );
@@ -235,7 +235,7 @@ class CassandraClusterSchemaMonitorTest
 
             // Verify initial schema processing
             verify(mockDatabaseAccessor, times(1)).fullSchema();
-            verify(mockDriverUnsupportedSchemaCache, times(1)).getFullSchema();
+            verify(mockSchemaCache, times(1)).getFullSchema();
             verify(mockCdcBridge, times(1)).updateCdcSchema(tablesCaptor.capture(), eq(Partitioner.Murmur3Partitioner), any());
             assertThat(tablesCaptor.getValue()).hasSize(1);
 
@@ -244,7 +244,7 @@ class CassandraClusterSchemaMonitorTest
 
             // Verify schema change detection and update
             verify(mockDatabaseAccessor, times(2)).fullSchema();
-            verify(mockDriverUnsupportedSchemaCache, times(2)).getFullSchema();
+            verify(mockSchemaCache, times(2)).getFullSchema();
             verify(mockCdcBridge, times(2)).updateCdcSchema(tablesCaptor.capture(), eq(Partitioner.Murmur3Partitioner), any());
             assertThat(tablesCaptor.getValue()).hasSize(2);
         }
