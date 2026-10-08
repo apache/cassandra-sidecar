@@ -35,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -117,8 +118,8 @@ class CQLSchemaAccessorTest
         String describeKeyspace = String.format("DESCRIBE KEYSPACE %s", keyspace);
         when(session.execute(eq(describeKeyspace))).then(invocation -> {
             ResultSet resultSet = mock(ResultSet.class);
-            when(resultSet.all()).thenReturn(List.of(mockRow(Map.of("create_statement", createKeyspaceStatement(keyspace))),
-                                                     mockRow(Map.of("create_statement", tableSchema))));
+            doReturn(List.of(mockRow(Map.of("create_statement", createKeyspaceStatement(keyspace))),
+                             mockRow(Map.of("create_statement", tableSchema)))).when(resultSet).all();
             return resultSet;
         });
 

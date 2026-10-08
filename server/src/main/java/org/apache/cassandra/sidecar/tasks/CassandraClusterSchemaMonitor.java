@@ -41,7 +41,7 @@ import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
@@ -78,20 +78,20 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     private final AtomicReference<Set<TableIdentifier>> lastRegisteredTables = new AtomicReference<>(Collections.emptySet());
     private final ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
     private final CdcDatabaseAccessor databaseAccessor;
-    private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
+    private final SchemaCache schemaCache;
     private final CopyOnWriteArrayList<Runnable> schemaChangeListeners = new CopyOnWriteArrayList<>();
     private final SidecarConfiguration sidecarConfiguration;
     private final InstanceMetadataFetcher instanceFetcher;
 
     public CassandraClusterSchemaMonitor(InstanceMetadataFetcher instanceFetcher,
                                          CdcDatabaseAccessor databaseAccessor,
-                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
+                                         SchemaCache schemaCache,
                                          SidecarConfiguration sidecarConfiguration)
     {
 
         this.instanceFetcher = instanceFetcher;
         this.databaseAccessor = databaseAccessor;
-        this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
+        this.schemaCache = schemaCache;
         this.sidecarConfiguration = sidecarConfiguration;
     }
 
@@ -109,8 +109,8 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
         try
         {
             LOGGER.debug("Checking for schema changes...");
-            String fullSchemaText = DriverUnsupportedSchemaCache.concatSchemas(databaseAccessor.fullSchema(),
-                                                                               driverUnsupportedSchemaCache.getFullSchema());
+            String fullSchemaText = schemaCache.concatSchemas(databaseAccessor.fullSchema(),
+                                                              schemaCache.getFullSchema());
             if (!fullSchemaText.equals(currSchemaText.get()))
             {
                 LOGGER.info("Schema change detected, refreshing CDC tables");
