@@ -76,7 +76,16 @@ public interface DriverConfiguration
     SslConfiguration sslConfiguration();
 
     /**
-     * @return Refresh interval of schema cache
+     * @deprecated use {@link #schemaRefreshTime()} instead
+     * @return Refresh interval of table schemas not supported by Java driver's metadata
+     * (not parseable, e.g. including vector type), {@code null} when it is not configured.
+     */
+    @Deprecated
+    SecondBoundConfiguration unsupportedTableSchemaRefreshTime();
+
+    /**
+     * @return Refresh interval of schema cache. When it is not configured, the deprecated
+     * {@link #unsupportedTableSchemaRefreshTime()} is used instead, if it is configured.
      */
     SecondBoundConfiguration schemaRefreshTime();
 }
