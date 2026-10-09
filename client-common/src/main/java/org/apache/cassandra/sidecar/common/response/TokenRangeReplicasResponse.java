@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.request.TokenRangeReplicasRequest;
 import org.jetbrains.annotations.Nullable;
@@ -177,6 +178,12 @@ public class TokenRangeReplicasResponse
         @Nullable
         private final Integer sidecarInstanceId;
 
+        public ReplicaMetadata(String state, String status, String fqdn, String address, int port, String datacenter)
+        {
+            this(state, status, fqdn, address, port, datacenter, null);
+        }
+
+        @JsonCreator
         public ReplicaMetadata(@JsonProperty("state") String state,
                                @JsonProperty("status") String status,
                                @JsonProperty("fqdn") String fqdn,
@@ -250,8 +257,8 @@ public class TokenRangeReplicasResponse
 
         /**
          * @return the id of the Sidecar instance that manages this replica, or {@code null} when the Sidecar
-         * serving the request does not manage this replica. Clients use it to route per-replica requests
-         * through a load balancer via the {@code instanceId} query parameter.
+         * serving the request does not manage this replica. Clients can pass it as the {@code instanceId}
+         * query parameter to a Sidecar configured to manage that replica. It does not select a load-balancer backend.
          */
         @JsonProperty("sidecarInstanceId")
         @Nullable

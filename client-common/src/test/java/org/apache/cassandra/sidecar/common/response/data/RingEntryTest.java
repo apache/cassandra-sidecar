@@ -32,6 +32,18 @@ class RingEntryTest
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
+    void testLegacyConstructorLeavesSidecarInstanceIdNull()
+    {
+        RingEntry entry = new RingEntry("dc1", "127.0.0.1", 7000, "rack1", "Up", "Normal",
+                                       "1 KiB", "100%", "42", "host1.local", "host-id-1");
+        RingEntry expected = new RingEntry.Builder().datacenter("dc1").address("127.0.0.1").port(7000)
+                                                   .rack("rack1").status("Up").state("Normal").load("1 KiB")
+                                                   .owns("100%").token("42").fqdn("host1.local").hostId("host-id-1").build();
+        assertThat(entry).isEqualTo(expected);
+        assertThat(entry.sidecarInstanceId()).isNull();
+    }
+
+    @Test
     void testRoundTripWithSidecarInstanceId() throws Exception
     {
         RingEntry original = new RingEntry.Builder()

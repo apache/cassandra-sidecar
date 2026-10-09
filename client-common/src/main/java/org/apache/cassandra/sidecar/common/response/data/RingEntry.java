@@ -43,6 +43,12 @@ public class RingEntry
     @Nullable
     private final Integer sidecarInstanceId;
 
+    public RingEntry(String datacenter, String address, int port, String rack, String status, String state,
+                     String load, String owns, String token, String fqdn, String hostId)
+    {
+        this(datacenter, address, port, rack, status, state, load, owns, token, fqdn, hostId, null);
+    }
+
     @JsonCreator
     public RingEntry(
     @JsonProperty("datacenter") String datacenter,
@@ -190,8 +196,8 @@ public class RingEntry
 
     /**
      * @return the id of the Sidecar instance that manages this node, or {@code null} when the Sidecar
-     * serving the request does not manage this node. Clients use it to route per-instance requests
-     * through a load balancer via the {@code instanceId} query parameter.
+     * serving the request does not manage this node. Clients can pass it as the {@code instanceId}
+     * query parameter to a Sidecar configured to manage that node. It does not select a load-balancer backend.
      */
     @JsonProperty("sidecarInstanceId")
     @Nullable

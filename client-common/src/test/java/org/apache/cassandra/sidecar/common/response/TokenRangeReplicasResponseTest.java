@@ -33,6 +33,19 @@ class TokenRangeReplicasResponseTest
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Test
+    void testLegacyConstructorLeavesSidecarInstanceIdNull()
+    {
+        ReplicaMetadata metadata = new ReplicaMetadata("Normal", "Up", "host1.local", "127.0.0.1", 7000, "dc1");
+        assertThat(metadata.sidecarInstanceId()).isNull();
+        assertThat(metadata.state()).isEqualTo("Normal");
+        assertThat(metadata.status()).isEqualTo("Up");
+        assertThat(metadata.fqdn()).isEqualTo("host1.local");
+        assertThat(metadata.address()).isEqualTo("127.0.0.1");
+        assertThat(metadata.port()).isEqualTo(7000);
+        assertThat(metadata.datacenter()).isEqualTo("dc1");
+    }
+
+    @Test
     void testReplicaMetadataRoundTripWithSidecarInstanceId() throws Exception
     {
         ReplicaMetadata original = new ReplicaMetadata("Normal", "Up", "host1.local",

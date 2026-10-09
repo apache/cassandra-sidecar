@@ -94,8 +94,8 @@ public class TokenRangeReplicaMapHandler extends AbstractHandler<Name> implement
     }
 
     /**
-     * Enriches the replica metadata with the id of the local Sidecar instance managing each replica, so that
-     * clients behind a load balancer can route per-replica requests via the {@code instanceId} query parameter.
+     * Enriches the replica metadata with the id of the local Sidecar instance managing each replica, so clients
+     * can supply an {@code instanceId} query parameter to a Sidecar configured to manage that replica.
      * Replicas not managed by this Sidecar retain a {@code null} id.
      */
     private TokenRangeReplicasResponse withSidecarInstanceIds(TokenRangeReplicasResponse response)

@@ -83,8 +83,8 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
     }
 
     /**
-     * Enriches each ring entry with the id of the local Sidecar instance managing the node, so that clients
-     * behind a load balancer can route per-instance requests via the {@code instanceId} query parameter.
+     * Enriches each ring entry with the id of the local Sidecar instance managing the node, so clients can
+     * supply an {@code instanceId} query parameter to a Sidecar configured to manage that node.
      * Nodes not managed by this Sidecar retain a {@code null} id.
      */
     private RingResponse withSidecarInstanceIds(RingResponse response)
