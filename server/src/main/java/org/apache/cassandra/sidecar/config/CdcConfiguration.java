@@ -46,6 +46,23 @@ public interface CdcConfiguration
      */
     SecondBoundConfiguration tableSchemaRefreshTime();
 
+    /**
+     * @return true (default) if the sidecar should assume the workload may issue CQL
+     * {@code BEGIN BATCH} statements writing to multiple tables in the same keyspace under a
+     * shared partition key, and therefore analyze the schema at each refresh to find non-CDC
+     * tables that share partition-key structure with a CDC-enabled table in the same keyspace
+     * — the only tables that could ever be co-located with a CDC-enabled table's update in the
+     * same commit-log {@code Mutation} — and register only those alongside CDC-enabled tables.
+     * This avoids {@code UnknownTableException} on such batches while skipping registration
+     * (and the deserialization cost that comes with it) for tables that could never actually be
+     * batched with a CDC-enabled table.
+     *
+     * <p>Set to {@code false} only if the workload never issues such batches; this registers
+     * CDC-enabled tables only (the cheapest option, no schema analysis performed), at the cost
+     * of silently dropping affected mutations entirely if that assumption turns out to be wrong.
+     */
+    boolean batchStatementsEnabled();
+
     /* CdcRawDirectorySpaceCleaner Configuration */
 
     /**

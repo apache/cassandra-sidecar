@@ -35,7 +35,6 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.ext.web.handler.HttpException;
 import org.apache.cassandra.sidecar.cluster.locator.LocalTokenRangesProvider;
-import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
 import org.apache.cassandra.sidecar.common.server.utils.ThrowableUtils;
@@ -145,7 +144,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
             RestoreJob job = range.job();
             if (job.isManagedBySidecar())
             {
-                if (job.status == RestoreJobStatus.STAGE_READY)
+                if (job.shouldStageNow())
                 {
                     if (Files.exists(range.stagedObjectPath()))
                     {
@@ -169,7 +168,7 @@ public class RestoreRangeTask implements RestoreRangeHandler
                                return Future.succeededFuture();
                            });
                 }
-                else if (job.status == RestoreJobStatus.IMPORT_READY)
+                else if (job.shouldImportNow())
                 {
                     if (range.hasStaged())
                     {
@@ -193,8 +192,9 @@ public class RestoreRangeTask implements RestoreRangeHandler
                 }
                 else
                 {
-                    String msg = "Unexpected restore job status. Expected only STAGE_READY or IMPORT_READY when " +
-                                 "processing active slices. Found status: " + job.statusWithOptionalDescription();
+                    String msg = "Unexpected restore job status. Expected the job to be ready to stage or to import " +
+                                 "when processing active slices. Found status: " + job.statusWithOptionalDescription() +
+                                 " and fast forward: " + (job.fastForwardEnabled ? "enabled" : "disabled");
                     Exception unexpectedState = new IllegalStateException(msg);
                     return Future.failedFuture(RestoreJobExceptions.ofFatal("Unexpected restore job status",
                                                                             range, unexpectedState));

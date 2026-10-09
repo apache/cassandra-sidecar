@@ -24,6 +24,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
@@ -42,6 +43,7 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_A
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CREDENTIAL_TYPE;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_EXPIRE_AT;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_FAST_FORWARD_ENABLED;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_ID;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_IMPORT_OPTIONS;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_LOCAL_DATA_CENTER;
@@ -65,6 +67,8 @@ import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_S
  * type is rejected at construction time to surface misconfigurations before they reach the AWS SDK.
  */
 @JsonInclude(JsonInclude.Include.NON_DEFAULT)
+// Ignore the unknown fields, so that a newer client can talk to an older server that does not know all the fields yet
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class CreateRestoreJobRequestPayload
 {
     private final UUID jobId;
@@ -75,6 +79,7 @@ public class CreateRestoreJobRequestPayload
     private final long expireAtInMillis;
     private final ConsistencyConfig consistencyConfig;
     private final boolean localDatacenterOnly;
+    private final boolean fastForwardEnabled;
 
     /**
      * Builder to build a {@link CreateRestoreJobRequestPayload}.
@@ -109,6 +114,9 @@ public class CreateRestoreJobRequestPayload
      * @param consistencyLevel    consistency level a job should satisfy
      * @param localDatacenter     the local datacenter name; required if using local consistency level and localDatacenterOnly is specified
      * @param localDatacenterOnly whether the job should restore to the specified local datacenter only
+     * @param fastForwardEnabled  whether Sidecar should eagerly pipeline the staging and the importing phases,
+     *                            i.e. stage while the job is in {@link RestoreJobStatus#CREATED} status and import
+     *                            once the job is in {@link RestoreJobStatus#STAGED} status
      */
     @JsonCreator
     public CreateRestoreJobRequestPayload(@JsonProperty(JOB_ID) UUID jobId,
@@ -119,7 +127,8 @@ public class CreateRestoreJobRequestPayload
                                           @JsonProperty(JOB_EXPIRE_AT) long expireAtInMillis,
                                           @JsonProperty(JOB_CONSISTENCY_LEVEL) String consistencyLevel,
                                           @JsonProperty(JOB_LOCAL_DATA_CENTER) String localDatacenter,
-                                          @JsonProperty(JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY) boolean localDatacenterOnly)
+                                          @JsonProperty(JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY) boolean localDatacenterOnly,
+                                          @JsonProperty(JOB_FAST_FORWARD_ENABLED) boolean fastForwardEnabled)
     {
         Preconditions.checkArgument(jobId == null || jobId.version() == 1,
                                     "Only time based UUIDs allowed for jobId");
@@ -142,6 +151,11 @@ public class CreateRestoreJobRequestPayload
         Preconditions.checkArgument(!localDatacenterOnly || StringUtils.isNotEmpty(localDatacenter),
                                     "Must specify a localDatacenter when restoreToLocalDatacenterOnly is true");
         this.localDatacenterOnly = localDatacenterOnly;
+        // Fast forward only alters the phase transitions of Sidecar-managed jobs. A job is Sidecar-managed if and only
+        // if it declares a consistency level. Reject the combination instead of silently ignoring the flag.
+        Preconditions.checkArgument(!fastForwardEnabled || this.consistencyConfig.consistencyLevel != null,
+                                    "Must specify a " + JOB_CONSISTENCY_LEVEL + " when fastForwardEnabled is true");
+        this.fastForwardEnabled = fastForwardEnabled;
     }
 
     /**
@@ -243,6 +257,15 @@ public class CreateRestoreJobRequestPayload
     }
 
     /**
+     * @return whether Sidecar should eagerly pipeline the staging and the importing phases of the job
+     */
+    @JsonProperty(JOB_FAST_FORWARD_ENABLED)
+    public boolean fastForwardEnabled()
+    {
+        return fastForwardEnabled;
+    }
+
+    /**
      * @return the AWS region of the S3 bucket, derived from {@code secrets.readCredentials().region()}
      */
     public String storageRegion()
@@ -261,6 +284,7 @@ public class CreateRestoreJobRequestPayload
                JOB_CONSISTENCY_LEVEL + "='" + consistencyLevel() + "', " +
                JOB_LOCAL_DATA_CENTER + "='" + localDatacenter() + "', " +
                JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY + "='" + shouldRestoreToLocalDatacenterOnly() + "', " +
+               JOB_FAST_FORWARD_ENABLED + "='" + fastForwardEnabled + "', " +
                JOB_IMPORT_OPTIONS + "='" + importOptions + "'}";
     }
 
@@ -279,6 +303,7 @@ public class CreateRestoreJobRequestPayload
         private ConsistencyLevel consistencyLevel = null;
         private String localDc = null;
         private boolean localDatacenterOnly = false;
+        private boolean fastForwardEnabled = false;
 
         Builder(RestoreJobSecrets secrets, long expireAtInMillis)
         {
@@ -324,6 +349,21 @@ public class CreateRestoreJobRequestPayload
             return update(b -> b.localDatacenterOnly = localDatacenterOnly);
         }
 
+        /**
+         * Enable eager pipelining of the staging and the importing phases. It requires a consistency level, i.e. the
+         * restore job must be Sidecar-managed.
+         *
+         * <p>Only enable it when the caller can accept that the imported data becomes immediately visible and that
+         * importing cannot be rolled back.
+         *
+         * @param fastForwardEnabled whether to enable fast forward
+         * @return builder
+         */
+        public Builder fastForwardEnabled(boolean fastForwardEnabled)
+        {
+            return update(b -> b.fastForwardEnabled = fastForwardEnabled);
+        }
+
         @Override
         public Builder self()
         {
@@ -350,7 +390,8 @@ public class CreateRestoreJobRequestPayload
              builder.expireAtInMillis,
              nameOrNull(builder.consistencyLevel),
              builder.localDc,
-             builder.localDatacenterOnly);
+             builder.localDatacenterOnly,
+             builder.fastForwardEnabled);
     }
 
     private static String nameOrNull(ConsistencyLevel cl)

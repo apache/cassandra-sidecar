@@ -19,7 +19,9 @@
 package org.apache.cassandra.sidecar.handlers.livemigration;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -205,12 +207,62 @@ class LiveMigrationFileStreamTest
     @Test
     public void testRequestInvalidPathUsingEncodedDots(VertxTestContext context) throws IOException
     {
+        // If %2E%2E were wrongly decoded and the path were collapsed unchecked, three "../"
+        // segments from <tempDir>/<id>/d1/data would walk up to <tempDir>/, where this decoy
+        // lives. Plant it so the test actually proves the request can't reach it. Vert.x rejects
+        // 3+ consecutive encoded ".." patterns, so the request never reaches the resolver.
+        createFile("decoy", tempDir.resolve("secrets").toString());
+
+        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%2E%2E/%2E%2E/%2E%2E/secrets",
+                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+    }
+
+    @Test
+    public void testRequestUsingDoubleEncodedDots(VertxTestContext context) throws IOException
+    {
+        // Double-encoded traversal: "%252e%252e%2f" decodes only once in Vert.x's normalizer to "%2e%2e/"
+        // ("%25" is a reserved char that is never decoded), so "%252e%252e" stays a literal path segment
+        // and is never collapsed into "..". Plant a secret two levels above the data dir
+        // (data/0 -> <tempDir>/<id>/d1/data, so "../../secret.txt" would resolve to <tempDir>/<id>/secret.txt)
+        // and confirm the double-encoded request cannot traverse out to reach it.
+        createFile("super-secret", tempDir.resolve(String.valueOf(FIRST_ID)).resolve("secret.txt").toString());
+        createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + "/ks/tb-1234/ks-tb-1234-Data.db");
+
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%252e%252e/%252e%252e/secret.txt";
+        shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+    }
+
+    @Test
+    public void testRouteFailsForSymlinkEscapingDataDir(VertxTestContext context) throws IOException
+    {
+        // A symlink planted inside the data dir that points outside the migration tree cannot be caught by
+        // the lexical ".." containment check. realPath() resolves symlinks via toRealPath() and rejects
+        // the escape with 403, so the file behind the symlink is not served.
+        Path outside = tempDir.resolve("outside-tree");
+        Files.createDirectories(outside);
+        createFile("top-secret", outside.resolve("secret.txt").toString());
+
+        Path dataDir = Paths.get(firstInstanceDataDirs.get(0));
+        Files.createDirectories(dataDir);
+        Files.createSymbolicLink(dataDir.resolve("escape"), outside);
+
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/escape/secret.txt";
+        shouldThrowError(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 403);
+    }
+
+    @Test
+    public void testRouteSucceedsForSymlinkWithinDataDir(VertxTestContext context) throws IOException
+    {
+        // A symlink that resolves to a target still inside the data dir is legitimate and must be served -
+        // the real-path containment check must not over-block symlinks within the migration tree.
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        // Vertx rejects 3+ consecutive %2E%2E (encoded ..) patterns
-        shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%2E%2E/%2E%2E/%2E%2E/secrets",
-                         FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+        Path dataDir = Paths.get(firstInstanceDataDirs.get(0));
+        Files.createSymbolicLink(dataDir.resolve("link-ks"), dataDir.resolve("ks"));
+
+        String testRoute = LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/link-ks/tb-1234/ks-tb-1234-Data.db";
+        shouldSucceed(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP);
     }
 
 
@@ -263,7 +315,9 @@ class LiveMigrationFileStreamTest
         String filePath = "/ks/tb-1234/ks-tb-1234-Data.db";
         createFile(DUMMY_CONTENT, firstInstanceDataDirs.get(0) + filePath);
 
-        // This route has 100 as dataHomeDir index which is greater than instance data home dir count. It should fail.
+        // dirIndex 100 is greater than the configured data dir count, so the URL doesn't match
+        // any configured prefix - reports it as a missing resource (404), since
+        // the URL is well-formed but addresses no directory configured on this instance.
         shouldThrowError(context, LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/100" + filePath,
                          FIRST_INSTANCE_IP, THIRD_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
     }

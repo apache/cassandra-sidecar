@@ -73,6 +73,22 @@ public class LiveMigrationExceptions
     }
 
     /**
+     * Thrown when a live-migration file URL is well-formed but matches no configured directory prefix
+     * on this instance, i.e. it addresses no resource here. Extends {@link IllegalArgumentException} so
+     * that destination-side callers - which map file URLs obtained from the source's file-list API onto
+     * local paths - keep treating an unmatched prefix (a source/destination directory-configuration
+     * mismatch) as a bad argument, while the source-side request handler can catch this specific type to
+     * distinguish "no such resource" (HTTP 404) from a malformed URL (HTTP 400).
+     */
+    public static class UnknownMigrationPrefixException extends IllegalArgumentException
+    {
+        public UnknownMigrationPrefixException(String message)
+        {
+            super(message);
+        }
+    }
+
+    /**
      * Exception thrown when file verification fails during live migration.
      */
     public static class FileVerificationFailureException extends Exception

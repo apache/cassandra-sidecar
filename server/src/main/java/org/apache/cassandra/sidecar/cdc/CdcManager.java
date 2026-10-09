@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
+import org.apache.cassandra.cdc.api.TableIdLookup;
 import org.apache.cassandra.cdc.api.TokenRangeSupplier;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.ReplicationFactorSupplier;
@@ -46,6 +47,7 @@ import org.apache.cassandra.sidecar.coordination.RangeManager;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.AsyncExecutor;
+import org.apache.cassandra.spark.utils.TableIdentifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.VisibleForTesting;
 
@@ -90,6 +92,7 @@ public class CdcManager
     private final CdcOptions cdcOptions;
     private final AsyncExecutor asyncExecutor;
     private final StateSidecarCdcCassandraClient cassandraClient;
+    private final CdcDatabaseAccessor cdcDatabaseAccessor;
 
 
     public CdcManager(EventConsumer eventConsumer,
@@ -116,6 +119,7 @@ public class CdcManager
         this.sidecarCdcStats = sidecarCdcStats;
         this.cdcOptions = cdcOptions;
         this.asyncExecutor = new ExecutorPoolsExecutor(taskExecutorPool);
+        this.cdcDatabaseAccessor = cdcDatabaseAccessor;
         this.cassandraClient = new StateSidecarCdcCassandraClient(cdcDatabaseAccessor);
         this.rfSupplier = new SidecarReplicationFactorSupplier(cdcOptions, schemaSupplier);
     }
@@ -218,8 +222,20 @@ public class CdcManager
                                          .withExecutor(asyncExecutor)
                                          .withReplicationFactorSupplier(rfSupplier)
                                          .withSidecarStatePersister(persister)
+                                         .withTableIdLookup(tableIdLookup())
                                          .build();
         return new CdcConsumerEntry(consumer, persister, sidecarCdcStats);
+    }
+
+    /**
+     * The TableId assigned when we build a table's schema in the CDC JVM (via
+     * {@code SchemaBuilder}) is otherwise random, but commit log mutations are serialized
+     * with the real Cassandra-cluster TableId. Without this lookup, every mutation for a
+     * freshly-registered table fails to deserialize with {@code UnknownTableException}.
+     */
+    private TableIdLookup tableIdLookup()
+    {
+        return (keyspace, table) -> cdcDatabaseAccessor.getTableId(TableIdentifier.of(keyspace, table));
     }
 
     private @NotNull SidecarStatePersister getSidecarStatePersister()

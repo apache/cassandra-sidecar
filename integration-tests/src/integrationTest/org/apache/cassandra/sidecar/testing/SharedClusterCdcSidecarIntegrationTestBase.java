@@ -39,9 +39,12 @@ import org.apache.cassandra.distributed.api.IInstance;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cdc.CdcConfig;
 import org.apache.cassandra.sidecar.cdc.CdcPublisher;
+import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarClientConfiguration;
+import org.apache.cassandra.sidecar.config.yaml.CdcConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.coordination.ContentionFreeRangeManager;
@@ -106,10 +109,24 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
         return builder -> {
             // Override service configuration to use specific port for CDC tests
             ServiceConfiguration existingConfig = builder.build().serviceConfiguration();
+            // CdcConfiguration defaults to disabled (and a 60s schema refresh cadence), which
+            // would leave CassandraClusterSchemaMonitor's periodic task permanently skipped
+            // (see its scheduleDecision()) — enable it explicitly here, with a short refresh
+            // time so tests asserting on its registered-table set don't need a long wait.
+            // batchStatementsEnabled is also set explicitly (rather than left to the shipped
+            // default) so CDC batch-risk-analysis test coverage doesn't silently change if that
+            // default is retuned.
+            CdcConfigurationImpl cdcConfiguration = CdcConfigurationImpl.builder()
+                                                                         .isEnabled(true)
+                                                                         .cdcConfigRefreshTime(MillisecondBoundConfiguration.parse("2s"))
+                                                                         .tableSchemaRefreshTime(SecondBoundConfiguration.parse("2s"))
+                                                                         .batchStatementsEnabled(true)
+                                                                         .build();
             ServiceConfiguration cdcServiceConfig = ServiceConfigurationImpl.builder()
                                                                             .host(existingConfig.host())
                                                                             .port(9043)  // TODO: Make this port dynamically allocated
                                                                             .schemaKeyspaceConfiguration(existingConfig.schemaKeyspaceConfiguration())
+                                                                            .cdcConfiguration(cdcConfiguration)
                                                                             .build();
             builder.serviceConfiguration(cdcServiceConfig);
 

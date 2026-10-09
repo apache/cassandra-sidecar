@@ -398,18 +398,27 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
     private void processOneJob(RestoreJob job, RestoreJobManagerGroup restoreJobManagers, RunContext context)
     {
+        // read the status seen from the prior run before shouldLogJob records the current one
+        boolean statusChanged = jobIdsByDay.getKnownStatus(job.jobId, job.createdAt.getDaysSinceEpoch()) != job.status;
         if (jobIdsByDay.shouldLogJob(job))
         {
             LOGGER.info("Found job. jobId={} job={}", job.jobId, job);
         }
 
+        if (statusChanged)
+        {
+            // Unset the flag, so that the slices are re-discovered once in the phase the job just entered.
+            // The flag is deliberately not unset on the subsequent runs of the same status; a fast forward job finds
+            // and submits its slices while in STAGED status, and repeating the discovery (which is expensive) on
+            // every run of the same phase would be wasteful.
+            jobIdsByDay.unsetSlicesDiscovered(job);
+        }
+
         switch (job.status)
         {
-            case STAGED:
-                // unset the flag, so that it can re-discover the slices when the job status changes to a ready status
-                jobIdsByDay.unsetSlicesDiscovered(job); // no break by design
             case CREATED:
             case STAGE_READY:
+            case STAGED:
             case IMPORT_READY:
                 if (job.hasExpired(context.nowMillis))
                 {
@@ -465,8 +474,13 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
         if (shouldFindSlicesAndSubmit(job))
         {
             findSlicesAndSubmit(job);
-            // Mark the flag. It prevents finding slices (which is expensive) until the flag is unset.
-            jobIdsByDay.markSlicesDiscovered(job);
+            if (job.status != RestoreJobStatus.CREATED)
+            {
+                // Mark the flag. It prevents finding slices (which is expensive) until the flag is unset.
+                // The flag is not marked while a fast forward job is still in CREATED status, since its slices are
+                // uploaded progressively and each run should look for the newly uploaded ones.
+                jobIdsByDay.markSlicesDiscovered(job);
+            }
         }
     }
 
@@ -507,7 +521,9 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
     private boolean shouldFindSlicesAndSubmit(RestoreJob job)
     {
-        return (job.status == RestoreJobStatus.STAGE_READY || job.status == RestoreJobStatus.IMPORT_READY)
+        // Note that the discovered flag is never marked while a fast forward job is in CREATED status, since its
+        // slices are uploaded progressively. The discovery therefore repeats on every run of that phase.
+        return (job.shouldStageNow() || job.shouldImportNow())
                && !jobIdsByDay.isSliceDiscovered(job);
     }
 

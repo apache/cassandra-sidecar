@@ -40,7 +40,6 @@ import org.apache.cassandra.sidecar.cluster.ConsistencyVerifiers;
 import org.apache.cassandra.sidecar.cluster.locator.InstanceSetByDc;
 import org.apache.cassandra.sidecar.common.data.ConsistencyVerificationResult;
 import org.apache.cassandra.sidecar.common.data.RestoreJobProgressFetchPolicy;
-import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.Token;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
@@ -75,7 +74,9 @@ public class RestoreJobConsistencyChecker
     private final RestoreRangeDatabaseAccessor rangeDatabaseAccessor;
     private final TaskExecutorPool taskExecutorPool;
     private final RestoreMetrics restoreMetrics;
-    private volatile boolean firstTimeSinceImportReady = true;
+    // Set to false after the first consistency check of the importing phase, which starts at IMPORT_READY normally
+    // and at STAGED when the job has fast forward enabled
+    private volatile boolean firstCheckOfImportPhase = true;
 
     @Inject
     public RestoreJobConsistencyChecker(RingTopologyRefresher ringTopologyRefresher,
@@ -140,11 +141,12 @@ public class RestoreJobConsistencyChecker
             return true;
         }
 
-        if (restoreJob.status == RestoreJobStatus.IMPORT_READY && firstTimeSinceImportReady)
+        if (restoreJob.shouldImportNow() && firstCheckOfImportPhase)
         {
-            firstTimeSinceImportReady = false;
-            LOGGER.info("First time checking consistency of the restore job after import_ready. " +
-                        "Mark the progress as pending and force restore job discover run. jobId={}", restoreJob.jobId);
+            firstCheckOfImportPhase = false;
+            LOGGER.info("First time checking consistency of the restore job after the importing phase has started. " +
+                        "Mark the progress as pending and force restore job discover run. jobId={} status={}",
+                        restoreJob.jobId, restoreJob.status);
             return true;
         }
         return false;
@@ -313,7 +315,8 @@ public class RestoreJobConsistencyChecker
                                                                 RestoreRangeStatus successCriteria,
                                                                 RestoreRange range)
     {
-        return concludeOneRange(populateReplicas(topology), verifier, successCriteria, range.tokenRange().range, range.statusByReplica());
+        return concludeOneRange(populateReplicas(topology), verifier, successCriteria,
+                                range.tokenRange().range, range.statusByReplica());
     }
 
     @VisibleForTesting

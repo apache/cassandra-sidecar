@@ -31,6 +31,9 @@ import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CdcBridge;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
+import org.apache.cassandra.sidecar.config.CdcConfiguration;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
@@ -61,6 +64,12 @@ public class CdcSchemaSupplierTest
     private CassandraBridge cassandraBridge;
     @Mock
     private CdcBridge cdcBridge;
+    @Mock
+    private SidecarConfiguration sidecarConfiguration;
+    @Mock
+    private ServiceConfiguration serviceConfiguration;
+    @Mock
+    private CdcConfiguration cdcConfiguration;
 
     private CdcSchemaSupplier cdcSchemaSupplier;
 
@@ -84,10 +93,15 @@ public class CdcSchemaSupplierTest
     {
         MockitoAnnotations.openMocks(this);
 
+        when(sidecarConfiguration.serviceConfiguration()).thenReturn(serviceConfiguration);
+        when(serviceConfiguration.cdcConfiguration()).thenReturn(cdcConfiguration);
+        when(cdcConfiguration.batchStatementsEnabled()).thenReturn(true);
+
         cdcSchemaSupplier = new CdcSchemaSupplier(
             instanceMetadataFetcher,
             cassandraBridgeFactory,
-            cdcDatabaseAccessor
+            cdcDatabaseAccessor,
+            sidecarConfiguration
         );
     }
 
@@ -105,7 +119,7 @@ public class CdcSchemaSupplierTest
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
-        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getCdcEnabledTables();
+        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getTables();
 
         assertThat(result).isNotNull();
         assertThat(result.isDone()).isTrue();
@@ -129,7 +143,7 @@ public class CdcSchemaSupplierTest
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
-        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getCdcEnabledTables();
+        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getTables();
 
         assertThat(result).isCompleted();
         Set<CqlTable> tables = result.get();
@@ -137,7 +151,7 @@ public class CdcSchemaSupplierTest
     }
 
     @Test
-    void testGetCdcEnabledTablesWithNoCdcTables() throws ExecutionException, InterruptedException
+    void testGetTablesReturnsEmptyWhenSchemaHasNoCdcTables() throws ExecutionException, InterruptedException
     {
         NodeSettings nodeSettings = mockNodeSettings("4.1.0", "Murmur3Partitioner");
 
@@ -148,13 +162,117 @@ public class CdcSchemaSupplierTest
         CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
         when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
+        when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
+        // setUp() already configures batchStatementsEnabled=true — with no CDC-enabled table in
+        // the schema at all, there is nothing to be "at risk" of a batch with, so no non-CDC
+        // table is registered either.
 
-        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getCdcEnabledTables();
+        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getTables();
 
         assertThat(result).isCompleted();
-        Set<CqlTable> tables = result.get();
-        assertThat(tables).isNotNull();
-        assertThat(tables).isEmpty();
+        assertThat(result.get()).isEmpty();
+    }
+
+    @Test
+    void testGetTablesExcludesKeyspaceWithNoCdcTablesUnderCdcKeyspacesScope() throws ExecutionException, InterruptedException
+    {
+        NodeSettings nodeSettings = mockNodeSettings("4.1.0", "Murmur3Partitioner");
+
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any()))
+            .thenReturn(SCHEMA_NO_CDC)  // Keyspace has zero CDC-enabled tables
+            .thenReturn(nodeSettings);
+
+        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
+        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
+        when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
+        when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
+
+        CompletableFuture<Set<CqlTable>> result = cdcSchemaSupplier.getTables();
+
+        // A keyspace with no CDC-enabled tables is excluded entirely.
+        assertThat(result.get()).isEmpty();
+    }
+
+    @Test
+    void testGetTablesIncludesNonCdcTableWithMatchingPartitionKeyStructure() throws ExecutionException, InterruptedException
+    {
+        String mixedSchema =
+            "CREATE KEYSPACE test_keyspace WITH REPLICATION = {'class':'NetworkTopologyStrategy','DC1':'3'} AND DURABLE_WRITES = true;\n" +
+            "CREATE TABLE test_keyspace.cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = true;\n" +
+            "CREATE TABLE test_keyspace.regular_table (id uuid PRIMARY KEY, data text);\n";
+        NodeSettings nodeSettings = mockNodeSettings("4.1.0", "Murmur3Partitioner");
+
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any()))
+            .thenReturn(mixedSchema)
+            .thenReturn(nodeSettings);
+
+        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
+        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
+        when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
+        // A distinct UUID per table — a single fixed UUID for all tables collides in the
+        // bridge's schema-building code once more than one table is built in the same call.
+        when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenAnswer(invocation -> UUID.randomUUID());
+
+        Set<CqlTable> tables = cdcSchemaSupplier.getTables().get();
+
+        // Both tables have a single-column uuid partition key — the same structure — so the
+        // non-CDC table could be batched with the CDC table under a shared partition key and
+        // must be registered too.
+        assertThat(tables).hasSize(2);
+        assertThat(tables).extracting(CqlTable::table).containsExactlyInAnyOrder("cdc_table", "regular_table");
+    }
+
+    @Test
+    void testGetTablesExcludesNonCdcTableWithMismatchedPartitionKeyStructure() throws ExecutionException, InterruptedException
+    {
+        String mixedSchema =
+            "CREATE KEYSPACE test_keyspace WITH REPLICATION = {'class':'NetworkTopologyStrategy','DC1':'3'} AND DURABLE_WRITES = true;\n" +
+            "CREATE TABLE test_keyspace.cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = true;\n" +
+            "CREATE TABLE test_keyspace.regular_table (id text PRIMARY KEY, data text);\n";
+        NodeSettings nodeSettings = mockNodeSettings("4.1.0", "Murmur3Partitioner");
+
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any()))
+            .thenReturn(mixedSchema)
+            .thenReturn(nodeSettings);
+
+        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
+        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
+        when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
+        when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenAnswer(invocation -> UUID.randomUUID());
+
+        Set<CqlTable> tables = cdcSchemaSupplier.getTables().get();
+
+        // regular_table's partition key is text, not uuid — it could never be co-located with
+        // cdc_table's update in the same Mutation, so it is excluded entirely.
+        assertThat(tables).hasSize(1);
+        assertThat(tables.iterator().next().table()).isEqualTo("cdc_table");
+    }
+
+    @Test
+    void testGetTablesRegistersOnlyCdcTableWhenBatchStatementsDisabled() throws ExecutionException, InterruptedException
+    {
+        when(cdcConfiguration.batchStatementsEnabled()).thenReturn(false);
+        String mixedSchema =
+            "CREATE KEYSPACE test_keyspace WITH REPLICATION = {'class':'NetworkTopologyStrategy','DC1':'3'} AND DURABLE_WRITES = true;\n" +
+            "CREATE TABLE test_keyspace.cdc_table (id uuid PRIMARY KEY, data text) WITH cdc = true;\n" +
+            "CREATE TABLE test_keyspace.regular_table (id uuid PRIMARY KEY, data text);\n";
+        NodeSettings nodeSettings = mockNodeSettings("4.1.0", "Murmur3Partitioner");
+
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any()))
+            .thenReturn(mixedSchema)
+            .thenReturn(nodeSettings);
+
+        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
+        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
+        when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
+        when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenAnswer(invocation -> UUID.randomUUID());
+
+        Set<CqlTable> tables = cdcSchemaSupplier.getTables().get();
+
+        // Even though regular_table shares partition key structure with cdc_table, the operator
+        // has asserted no cross-table batches happen — only the CDC-enabled table is registered.
+        assertThat(tables).hasSize(1);
+        assertThat(tables.iterator().next().table()).isEqualTo("cdc_table");
     }
 
     @Test
@@ -172,7 +290,7 @@ public class CdcSchemaSupplierTest
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
-        cdcSchemaSupplier.getCdcEnabledTables();
+        cdcSchemaSupplier.getTables();
 
         verify(cassandraBridgeFactory).get(releaseVersion);
     }

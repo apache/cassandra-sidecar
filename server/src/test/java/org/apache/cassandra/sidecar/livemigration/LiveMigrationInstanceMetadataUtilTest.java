@@ -18,7 +18,12 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
@@ -31,6 +36,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.UnknownMigrationPrefixException;
 import org.mockito.Mockito;
 
 import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_CDC_RAW_DIR_PATH;
@@ -40,6 +46,7 @@ import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetada
 import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_LOCAL_SYSTEM_DATA_FILE_DIR_PATH;
 import static org.apache.cassandra.sidecar.handlers.livemigration.InstanceMetadataTestUtil.LIVE_MIGRATION_SAVED_CACHES_DIR_PATH;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.localPath;
+import static org.apache.cassandra.sidecar.livemigration.LiveMigrationInstanceMetadataUtil.resolveLexically;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.CDC_RAW_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.COMMITLOG_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.DATA_FILE_DIR_PLACEHOLDER;
@@ -47,6 +54,7 @@ import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholde
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.LOCAL_SYSTEM_DATA_FILE_DIR_PLACEHOLDER;
 import static org.apache.cassandra.sidecar.livemigration.LiveMigrationPlaceholderUtil.SAVED_CACHES_DIR_PLACEHOLDER;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.entry;
 import static org.mockito.Mockito.when;
@@ -306,6 +314,118 @@ class LiveMigrationInstanceMetadataUtilTest
                                  instanceMetadata);
         validateIllegalLocalPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/" + FILE_NAME + "/../../../../etc/passwd",
                                  instanceMetadata);
+    }
+
+    @Test
+    public void testLocalPathDoesNotEscapeForEncodedTraversal()
+    {
+        // Vert.x's normalizedPath() does a single unreserved-char decode followed by dot-segment removal.
+        // A double-encoded "%252e%252e" survives as the literal "%252e%252e" (because "%25" is reserved and
+        // is never decoded), and an encoded slash "%2f" stays encoded so "..%2f..%2f" is a single literal
+        // path element rather than parent-directory segments. In both cases the sequence reaches localPath()
+        // as ordinary file-name text, so the resolved path must stay *inside* the data directory and never
+        // escape it. This locks in that the reported double-encoding bypass cannot traverse out of the root.
+        String cassandraHomeDir = tempDir.resolve("encodedTraversal").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        String dataDir = instanceMetadata.dataDirs().get(0);
+
+        // Double-encoded ".." segments (what survives Vert.x normalization for %252e%252e input)
+        // resolve as literal directory names inside the data dir, not as parent-directory hops.
+        assertThat(localPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/%252e%252e/%252e%252e/etc/passwd",
+                             instanceMetadata).toString())
+        .isEqualTo(dataDir + "/%252e%252e/%252e%252e/etc/passwd");
+
+        // Encoded-slash sequence (what survives normalization for %2e%2e%2f input) stays a single literal
+        // path element, so it too resolves inside the data dir.
+        assertThat(localPath(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/..%2f..%2fetc/passwd",
+                             instanceMetadata).toString())
+        .isEqualTo(dataDir + "/ks/..%2f..%2fetc/passwd");
+    }
+
+    @Test
+    public void testRealPathRejectsSymlinkEscape() throws IOException
+    {
+        // A symlink inside the data dir pointing outside the migration tree must be rejected by the
+        // realpath-based containment check; the lexical localPath() check alone cannot detect this.
+        String cassandraHomeDir = tempDir.resolve("symlinkEscape").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+
+        Path outside = tempDir.resolve("outside-tree");
+        Files.createDirectories(outside);
+        Files.write(outside.resolve("secret.txt"), "secret".getBytes(StandardCharsets.UTF_8));
+
+        Path dataDir = Paths.get(instanceMetadata.dataDirs().get(0));
+        Files.createDirectories(dataDir);
+        Files.createSymbolicLink(dataDir.resolve("escape"), outside);
+
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> resolveLexically(
+                          LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/escape/secret.txt", instanceMetadata)
+                          .verifyContainment());
+    }
+
+    @Test
+    public void testRealPathReturnsLexicalForSymlinkWithinDir() throws IOException
+    {
+        // A symlink whose target is still inside the data dir is legitimate; verifyContainment
+        // accepts it without throwing, and resolveLexically returns the lexical (URL-derived)
+        // path so downstream consumers operate against the configured directory namespace.
+        String cassandraHomeDir = tempDir.resolve("symlinkWithin").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+
+        Path dataDir = Paths.get(instanceMetadata.dataDirs().get(0));
+        Files.createDirectories(dataDir.resolve("ks"));
+        Files.write(dataDir.resolve("ks/file.db"), "data".getBytes(StandardCharsets.UTF_8));
+        Files.createSymbolicLink(dataDir.resolve("link-ks"), dataDir.resolve("ks"));
+
+        LiveMigrationInstanceMetadataUtil.ResolvedPath resolved =
+            resolveLexically(LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/link-ks/file.db", instanceMetadata);
+        resolved.verifyContainment();
+        assertThat(resolved.resolvedPath()).isEqualTo(dataDir.resolve("link-ks/file.db"));
+    }
+
+    @Test
+    public void testRealPathThrowsForNonExistentPath()
+    {
+        // verifyContainment does an explicit Files.exists check before toRealPath and throws
+        // NoSuchFileException when the resolved file is missing, so callers can distinguish
+        // "file not found" cleanly from "path escapes base directory" (IllegalArgumentException).
+        String cassandraHomeDir = tempDir.resolve("nonexistent").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+
+        assertThatExceptionOfType(NoSuchFileException.class)
+        .isThrownBy(() -> resolveLexically(
+                          LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/ks/foo.db", instanceMetadata)
+                          .verifyContainment());
+    }
+
+    @Test
+    public void testRealPathRejectsLexicalTraversal()
+    {
+        // resolveLexically rejects /../ patterns up-front, before any filesystem I/O runs — same
+        // guard that localPath uses.
+        String cassandraHomeDir = tempDir.resolve("lexicalEscape").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> resolveLexically(
+                          LIVE_MIGRATION_DATA_FILE_DIR_PATH + "/0/../../etc/passwd", instanceMetadata));
+    }
+
+    @Test
+    public void testResolveLexicallyThrowsForUnknownPrefix()
+    {
+        // A well-formed URL whose prefix matches no configured directory is reported via
+        // UnknownMigrationPrefixException. It is a subtype of IllegalArgumentException (so destination-side
+        // localPath callers keep treating it as a bad argument), while the source-side handler catches this
+        // specific type to answer 404 - "no such resource" - instead of 400 for a malformed URL.
+        String cassandraHomeDir = tempDir.resolve("unknownPrefix").toString();
+        InstanceMetadata instanceMetadata = getInstanceMetadata(cassandraHomeDir);
+        when(instanceMetadata.cdcDir()).thenReturn(null);
+
+        assertThatExceptionOfType(UnknownMigrationPrefixException.class)
+        .isThrownBy(() -> resolveLexically(LIVE_MIGRATION_CDC_RAW_DIR_PATH + "/0/" + FILE_NAME, instanceMetadata))
+        .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

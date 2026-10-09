@@ -121,6 +121,35 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
     }
 
     @CassandraIntegrationTest
+    void testFastForwardEnabledRoundTrips()
+    {
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+
+        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
+        UUID jobId = UUIDs.timeBased();
+        CreateRestoreJobRequestPayload payload = CreateRestoreJobRequestPayload.builder(secrets, expiresAtMillis)
+                                                                               .jobId(jobId)
+                                                                               .jobAgent("agent")
+                                                                               .consistencyLevel(ConsistencyLevel.QUORUM)
+                                                                               .fastForwardEnabled(true)
+                                                                               .build();
+        accessor.create(payload, qualifiedTableName);
+
+        RestoreJob found = accessor.find(jobId);
+        assertThat(found).isNotNull();
+        assertThat(found.fastForwardEnabled).isTrue();
+
+        // the flag is preserved when other fields of the job are updated
+        UpdateRestoreJobRequestPayload markStaged
+        = new UpdateRestoreJobRequestPayload(null, null, RestoreJobStatus.STAGED, null, null);
+        accessor.update(markStaged, found);
+        assertThat(accessor.find(jobId).fastForwardEnabled).isTrue();
+
+        // and it is disabled by default
+        assertThat(accessor.find(createJob(accessor)).fastForwardEnabled).isFalse();
+    }
+
+    @CassandraIntegrationTest
     void testStaticCredentialTypeRoundTrips()
     {
         waitForSchemaReady(30, TimeUnit.SECONDS);

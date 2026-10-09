@@ -20,7 +20,9 @@ package org.apache.cassandra.sidecar.handlers.livemigration;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -276,6 +278,40 @@ public class LiveMigrationFileDigestHandlerTest
 
         String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0" + filePath + "?digestAlgorithm=md5";
         shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+    }
+
+    @Test
+    public void testRequestUsingDoubleEncodedDots(VertxTestContext context) throws IOException
+    {
+        // Double-encoded traversal: "%252e%252e%2f" decodes only once in Vert.x's normalizer to "%2e%2e/"
+        // ("%25" is a reserved char that is never decoded), so "%252e%252e" stays a literal path segment and
+        // is never collapsed into "..". Plant a secret two levels above the data dir (data/0 ->
+        // <tempDir>/<id>/d1/data, so "../../secret.txt" would resolve to <tempDir>/<id>/secret.txt) and
+        // confirm the double-encoded request cannot traverse out to digest it. The resolve handler runs
+        // before the digest handler, so this guard protects the digest endpoint too.
+        createFile("super-secret", tempDir.resolve(String.valueOf(FIRST_ID)).resolve("secret.txt").toString());
+
+        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0/%252e%252e/%252e%252e/secret.txt?digestAlgorithm=md5";
+        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 404);
+    }
+
+    @Test
+    public void testRouteFailsForSymlinkEscapingDataDir(VertxTestContext context) throws IOException
+    {
+        // A symlink inside the data dir pointing outside the migration tree cannot be caught by the lexical
+        // ".." containment check. realPath() resolves symlinks via toRealPath() and must reject the escape
+        // with 403, so no digest is computed for the file behind the symlink. The resolve handler runs
+        // before the digest handler, so this guard protects the digest endpoint too.
+        Path outside = tempDir.resolve("outside-tree");
+        Files.createDirectories(outside);
+        createFile("top-secret", outside.resolve("secret.txt").toString());
+
+        Path dataDir = Paths.get(firstInstanceDataDirs.get(0));
+        Files.createDirectories(dataDir);
+        Files.createSymbolicLink(dataDir.resolve("escape"), outside);
+
+        String testRoute = LIVE_MIGRATION_FILES_ROUTE + "/data/0/escape/secret.txt?digestAlgorithm=md5";
+        shouldFail(context, testRoute, FIRST_INSTANCE_IP, SECOND_INSTANCE_IP, FIRST_INSTANCE_IP, 403);
     }
 
     @Test

@@ -362,9 +362,10 @@ public class CdcModule extends AbstractModule
     @Singleton
     public SchemaSupplier schemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher,
                                          CassandraBridgeFactory cassandraBridgeFactory,
-                                         CdcDatabaseAccessor cdcDatabaseAccessor)
+                                         CdcDatabaseAccessor cdcDatabaseAccessor,
+                                         SidecarConfiguration sidecarConfiguration)
     {
-        return new CdcSchemaSupplier(instanceMetadataFetcher, cassandraBridgeFactory, cdcDatabaseAccessor);
+        return new CdcSchemaSupplier(instanceMetadataFetcher, cassandraBridgeFactory, cdcDatabaseAccessor, sidecarConfiguration);
     }
 
     @Provides

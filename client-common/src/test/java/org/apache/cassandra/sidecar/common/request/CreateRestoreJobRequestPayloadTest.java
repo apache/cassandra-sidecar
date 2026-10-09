@@ -28,7 +28,6 @@ import org.junit.jupiter.api.Test;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.fasterxml.jackson.databind.exc.ValueInstantiationException;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
 import org.apache.cassandra.sidecar.common.data.CredentialType;
@@ -39,6 +38,7 @@ import org.apache.cassandra.sidecar.common.request.data.CreateRestoreJobRequestP
 import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_CONSISTENCY_LEVEL;
+import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_FAST_FORWARD_ENABLED;
 import static org.apache.cassandra.sidecar.common.data.RestoreJobConstants.JOB_RESTORE_TO_LOCAL_DATA_CENTER_ONLY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -94,17 +94,21 @@ class CreateRestoreJobRequestPayloadTest
     }
 
     @Test
-    void testReadFromJsonFailsWithUnknownFields() throws JsonProcessingException
+    void testReadFromJsonIgnoresUnknownFields() throws JsonProcessingException
     {
         String uuid = "e870e5dc-d25e-11ed-afa1-0242ac120002";
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        // "status" is not a field of the create payload; it is ignored, so that a newer client that sends fields
+        // unknown to this version can still be served. Note that the status of a created job is always CREATED.
         String json = "{\"jobId\":\"" + uuid + "\"," +
                       "\"jobAgent\":\"Spark Bulk Analytics\"," +
                       "\"status\":\"Completed\"," +
                       "\"expireAt\":" + (System.currentTimeMillis() + 1000) +
-                      ",\"secrets\":" + MAPPER.writeValueAsString(RestoreJobSecretsGen.genRestoreJobSecrets()) + "}";
-        assertThatThrownBy(() -> MAPPER.readValue(json, CreateRestoreJobRequestPayload.class))
-        .isInstanceOf(UnrecognizedPropertyException.class)
-        .hasMessageContaining("Unrecognized field \"status\"");
+                      ",\"secrets\":" + MAPPER.writeValueAsString(secrets) + "}";
+        CreateRestoreJobRequestPayload payload = MAPPER.readValue(json, CreateRestoreJobRequestPayload.class);
+        assertThat(payload.jobId()).hasToString(uuid);
+        assertThat(payload.jobAgent()).isEqualTo("Spark Bulk Analytics");
+        assertThat(payload.secrets()).isEqualTo(secrets);
     }
 
     @Test
@@ -397,5 +401,49 @@ class CreateRestoreJobRequestPayloadTest
         .isInstanceOf(ValueInstantiationException.class)
         .hasCauseInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("Static credentials must have all key fields present for writeCredentials");
+    }
+
+    @Test
+    void testFastForwardEnabledSerDeser() throws JsonProcessingException
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload
+                                             .builder(secrets, System.currentTimeMillis() + 10000)
+                                             .jobAgent("agent")
+                                             .consistencyLevel(ConsistencyLevel.QUORUM)
+                                             .fastForwardEnabled(true)
+                                             .build();
+        assertThat(req.fastForwardEnabled()).isTrue();
+
+        String json = MAPPER.writeValueAsString(req);
+        assertThat(json).contains("\"" + JOB_FAST_FORWARD_ENABLED + "\":true");
+        assertThat(MAPPER.readValue(json, CreateRestoreJobRequestPayload.class).fastForwardEnabled()).isTrue();
+    }
+
+    @Test
+    void testFastForwardDisabledByDefault() throws JsonProcessingException
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        CreateRestoreJobRequestPayload req = CreateRestoreJobRequestPayload
+                                             .builder(secrets, System.currentTimeMillis() + 10000)
+                                             .consistencyLevel(ConsistencyLevel.QUORUM)
+                                             .build();
+        assertThat(req.fastForwardEnabled()).isFalse();
+        assertThat(MAPPER.writeValueAsString(req))
+        .describedAs("Default value fields should be excluded")
+        .doesNotContain(JOB_FAST_FORWARD_ENABLED);
+    }
+
+    @Test
+    void testFastForwardEnabledWithoutConsistencyLevelFails()
+    {
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        // fast forward only applies to Sidecar-managed jobs, i.e. the jobs that declare a consistency level
+        assertThatThrownBy(() -> CreateRestoreJobRequestPayload
+                                 .builder(secrets, System.currentTimeMillis() + 10000)
+                                 .fastForwardEnabled(true)
+                                 .build())
+        .isExactlyInstanceOf(IllegalArgumentException.class)
+        .hasMessage("Must specify a " + JOB_CONSISTENCY_LEVEL + " when fastForwardEnabled is true");
     }
 }

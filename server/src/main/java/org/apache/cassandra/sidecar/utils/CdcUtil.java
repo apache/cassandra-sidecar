@@ -30,7 +30,9 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
 
+import com.datastax.driver.core.DataType;
 import org.apache.cassandra.spark.utils.TableIdentifier;
 import org.jetbrains.annotations.NotNull;
 
@@ -54,6 +56,15 @@ public final class CdcUtil
     static final Pattern SEGMENT_PATTERN = Pattern.compile(FILENAME_PREFIX + "(?:\\d+" + SEPARATOR + ")?" + "(\\d+)" + FILENAME_EXTENSION);
     public static final Pattern IDX_FILE_PATTERN = Pattern.compile(FILENAME_PREFIX + "(?:\\d+" + SEPARATOR + ")?" + "(\\d+)" + IDX_FILE_EXTENSION);
     public static final List<String> TABLE_PROPERTY_OVERRIDE_ALLOWLIST = List.of("min_index_interval", "max_index_interval", "cdc");
+
+    // Matches a top-level-split column-defs entry that is itself the "PRIMARY KEY (...)"
+    // clause, rather than a column definition — e.g. "PRIMARY KEY ((a, b), c)" or
+    // "PRIMARY KEY (a, b)". Captures everything inside the outermost parentheses.
+    private static final Pattern PRIMARY_KEY_CLAUSE_PATTERN = Pattern.compile("PRIMARY\\s+KEY\\s*\\((.*)\\)", Pattern.CASE_INSENSITIVE);
+    // Matches a trailing "PRIMARY KEY" on a column definition line, e.g. "id uuid PRIMARY KEY".
+    private static final Pattern INLINE_PRIMARY_KEY_SUFFIX = Pattern.compile("\\s+PRIMARY\\s+KEY\\s*$", Pattern.CASE_INSENSITIVE);
+    // Matches a trailing "STATIC" on a column definition line, e.g. "count counter STATIC".
+    private static final Pattern STATIC_SUFFIX = Pattern.compile("\\s+STATIC\\s*$", Pattern.CASE_INSENSITIVE);
 
     private static final int READ_INDEX_FILE_MAX_RETRY = 5;
 
@@ -191,22 +202,392 @@ public final class CdcUtil
     }
 
     /**
-     * @param schemaStr full cluster schema text.
-     * @return map of keyspace/table identifier to table create statements.
+     * Holds a table's create statement and whether CDC is enabled on it.
      */
-    public static Map<TableIdentifier, String> extractCdcTables(@NotNull String schemaStr)
+    public static class TableSchema
+    {
+        public final String createStatement;
+        public final boolean cdc;
+        public final PartitionKeySignature partitionKeySignature;
+
+        public TableSchema(String createStatement, boolean cdc, PartitionKeySignature partitionKeySignature)
+        {
+            this.createStatement = createStatement;
+            this.cdc = cdc;
+            this.partitionKeySignature = partitionKeySignature;
+        }
+    }
+
+    /**
+     * A structural signature for a table's partition key: the ordered list of normalized CQL
+     * type strings declared for each partition-key column. Column names don't matter — only
+     * whether two tables' partition keys could ever serialize to the same bytes in a batch.
+     *
+     * <p>An {@link #indeterminate} signature (couldn't be confidently parsed) matches every
+     * other signature via {@link #structurallyMatches} — a fail-safe so an unparseable table is
+     * always included rather than silently excluded.
+     */
+    public static final class PartitionKeySignature
+    {
+        private static final PartitionKeySignature INDETERMINATE = new PartitionKeySignature(null, true);
+
+        /**
+         * Native CQL types with a fixed, known serialized width, mapped to that width in bytes.
+         * Two types at the same width (e.g. {@code bigint}/{@code timestamp}, both 8 bytes) can
+         * be byte-identical for every value, so {@link #structurallyMatches} treats them as
+         * matching. Types not listed here (blob, text, varint, collections, UDTs, ...) have no
+         * such guarantee and fall back to exact type-name equality instead.
+         */
+        private static final Map<DataType.Name, Integer> FIXED_WIDTH_BYTES =
+            new ImmutableMap.Builder<DataType.Name, Integer>()
+                .put(DataType.Name.TINYINT, 1)
+                .put(DataType.Name.BOOLEAN, 1)
+                .put(DataType.Name.SMALLINT, 2)
+                .put(DataType.Name.INT, 4)
+                .put(DataType.Name.DATE, 4)
+                .put(DataType.Name.FLOAT, 4)
+                .put(DataType.Name.BIGINT, 8)
+                .put(DataType.Name.TIMESTAMP, 8)
+                .put(DataType.Name.TIME, 8)
+                .put(DataType.Name.DOUBLE, 8)
+                .put(DataType.Name.UUID, 16)
+                .put(DataType.Name.TIMEUUID, 16)
+                .build();
+
+        public final List<String> columnTypes;
+        public final boolean indeterminate;
+
+        private PartitionKeySignature(List<String> columnTypes, boolean indeterminate)
+        {
+            this.columnTypes = columnTypes;
+            this.indeterminate = indeterminate;
+        }
+
+        public static PartitionKeySignature of(List<String> columnTypes)
+        {
+            return new PartitionKeySignature(new ArrayList<>(columnTypes), false);
+        }
+
+        public static PartitionKeySignature indeterminate()
+        {
+            return INDETERMINATE;
+        }
+
+        /**
+         * @param other the other table's partition-key signature
+         * @return true if a table with this signature could be co-located with a table with
+         * {@code other}'s signature in the same commit-log {@code Mutation} (same keyspace,
+         * same partition key bytes). Always true if either signature is indeterminate.
+         */
+        public boolean structurallyMatches(PartitionKeySignature other)
+        {
+            if (this.indeterminate || other.indeterminate)
+            {
+                return true;
+            }
+            if (this.columnTypes.size() != other.columnTypes.size())
+            {
+                return false;
+            }
+            for (int i = 0; i < this.columnTypes.size(); i++)
+            {
+                if (!canShareBytes(this.columnTypes.get(i), other.columnTypes.get(i)))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        private static boolean canShareBytes(String typeA, String typeB)
+        {
+            if (typeA.equals(typeB))
+            {
+                return true;
+            }
+            Integer width = fixedWidthBytes(typeA);
+            return width != null && width.equals(fixedWidthBytes(typeB));
+        }
+
+        private static Integer fixedWidthBytes(String normalizedType)
+        {
+            try
+            {
+                return FIXED_WIDTH_BYTES.get(DataType.Name.valueOf(normalizedType.toUpperCase()));
+            }
+            catch (IllegalArgumentException e)
+            {
+                return null;
+            }
+        }
+
+        @Override
+        public String toString()
+        {
+            return indeterminate ? "PartitionKeySignature{indeterminate}" : "PartitionKeySignature" + columnTypes;
+        }
+    }
+
+    /**
+     * Extracts ALL tables from the full cluster schema with their correct CDC flag.
+     * The CDC flag is derived directly from the CREATE TABLE statement (cdc = true/false).
+     * This allows callers to build {@link org.apache.cassandra.spark.data.CqlTable} objects
+     * with the correct {@link org.apache.cassandra.spark.data.CqlTable#cdc()} value without
+     * any pre-filtering — ensuring the bridge's Schema.instance is complete enough to
+     * deserialize any commit log mutation without UnknownTableException.
+     *
+     * <p>Each returned {@link TableSchema} also carries a {@link PartitionKeySignature},
+     * extracted cheaply (regex only, no real CQL grammar parsing) in this same pass, so callers
+     * can decide which non-CDC tables are actually at risk of being batched with a CDC-enabled
+     * table without needing to run the expensive {@code CassandraBridge.buildSchema()} parse
+     * step on every table just to learn its partition-key structure.
+     *
+     * @param schemaStr full cluster schema text.
+     * @return map of keyspace/table identifier to {@link TableSchema} (create statement + cdc
+     * flag + partition-key signature).
+     */
+    public static Map<TableIdentifier, TableSchema> extractAllTablesWithCdcFlag(@NotNull String schemaStr)
     {
         String cleaned = cleanCql(schemaStr);
-        Pattern pattern = Pattern.compile("CREATE TABLE \"?(\\w+)\"?\\.\"?(\\w+)\"?[^;]*cdc = true[^;]*;");
+        Pattern pattern = Pattern.compile("CREATE TABLE \"?(\\w+)\"?\\.\"?(\\w+)\"?[^;]*;");
         Matcher matcher = pattern.matcher(cleaned);
-        Map<TableIdentifier, String> createStmts = new HashMap<>();
+        Map<TableIdentifier, TableSchema> result = new HashMap<>();
         while (matcher.find())
         {
             String keyspace = matcher.group(1);
             String table = matcher.group(2);
-            createStmts.put(TableIdentifier.of(keyspace, table), extractCleanedTableSchema(cleaned, keyspace, table));
+            // Detect CDC flag from the raw full schema fragment BEFORE extractCleanedTableSchema
+            // strips table properties — the cleaned create statement omits cdc = true/false.
+            String rawFragment = matcher.group(0);
+            boolean cdc = rawFragment.contains("cdc = true");
+            String createStmt = extractCleanedTableSchema(cleaned, keyspace, table);
+            PartitionKeySignature pkSignature = extractPartitionKeySignature(rawFragment);
+            result.put(TableIdentifier.of(keyspace, table), new TableSchema(createStmt, cdc, pkSignature));
         }
-        return createStmts;
+        return result;
+    }
+
+    /**
+     * Extracts the {@link PartitionKeySignature} for a single table from its raw
+     * (whitespace-cleaned via {@link #cleanCql}, but not yet property-stripped) CREATE TABLE
+     * fragment. Cheap and regex-based — never invokes real CQL grammar parsing — so it is safe
+     * to run for every table in the schema.
+     *
+     * <p>Supports both CQL primary key declaration forms:
+     * <ul>
+     *   <li>Inline single-column: {@code col type PRIMARY KEY}</li>
+     *   <li>Trailing clause, single or composite partition key: {@code PRIMARY KEY (col, ...)}
+     *   or {@code PRIMARY KEY ((colA, colB), ...)}</li>
+     * </ul>
+     *
+     * <p>UDT-typed partition-key columns are treated as opaque tokens (the UDT's name, not its
+     * expanded field structure) — sufficient because a real batch statement requires the
+     * literal same CQL type on both sides to bind matching partition key values, and UDT names
+     * are unique within a keyspace.
+     *
+     * <p>Any parsing ambiguity (unrecognized syntax, unresolvable column type, missing primary
+     * key) results in {@link PartitionKeySignature#indeterminate()} rather than a guess, so
+     * callers never silently exclude a table they're unsure about.
+     */
+    private static PartitionKeySignature extractPartitionKeySignature(String tableFragment)
+    {
+        try
+        {
+            String withColumnDefs = removeTableProps(tableFragment);
+            int firstParen = withColumnDefs.indexOf('(');
+            if (firstParen < 0 || !withColumnDefs.endsWith(")"))
+            {
+                return PartitionKeySignature.indeterminate();
+            }
+            String columnDefsBlock = withColumnDefs.substring(firstParen + 1, withColumnDefs.length() - 1);
+
+            Map<String, String> columnTypes = new HashMap<>();
+            String inlinePkColumn = null;
+            String primaryKeyClauseInner = null;
+
+            for (String rawPart : splitTopLevel(columnDefsBlock, ','))
+            {
+                String part = rawPart.trim();
+                if (part.isEmpty())
+                {
+                    continue;
+                }
+
+                Matcher pkClauseMatcher = PRIMARY_KEY_CLAUSE_PATTERN.matcher(part);
+                if (pkClauseMatcher.matches())
+                {
+                    primaryKeyClauseInner = pkClauseMatcher.group(1).trim();
+                    continue;
+                }
+
+                // column definition: "name type [STATIC] [PRIMARY KEY]"
+                boolean isInlinePk = false;
+                Matcher inlinePk = INLINE_PRIMARY_KEY_SUFFIX.matcher(part);
+                if (inlinePk.find())
+                {
+                    isInlinePk = true;
+                    part = part.substring(0, inlinePk.start());
+                }
+                Matcher staticMatcher = STATIC_SUFFIX.matcher(part);
+                if (staticMatcher.find())
+                {
+                    part = part.substring(0, staticMatcher.start());
+                }
+
+                int firstSpace = findNameTypeSplitIndex(part);
+                if (firstSpace < 0)
+                {
+                    // malformed column definition — can't determine name/type split
+                    return PartitionKeySignature.indeterminate();
+                }
+                String columnName = stripQuotes(part.substring(0, firstSpace).trim());
+                String type = normalizeType(part.substring(firstSpace + 1));
+                columnTypes.put(columnName, type);
+
+                if (isInlinePk)
+                {
+                    inlinePkColumn = columnName;
+                }
+            }
+
+            List<String> partitionKeyColumnNames;
+            if (primaryKeyClauseInner != null)
+            {
+                partitionKeyColumnNames = parsePartitionKeyColumnNames(primaryKeyClauseInner);
+            }
+            else if (inlinePkColumn != null)
+            {
+                partitionKeyColumnNames = List.of(inlinePkColumn);
+            }
+            else
+            {
+                // no PRIMARY KEY found at all — shouldn't happen for a valid schema
+                return PartitionKeySignature.indeterminate();
+            }
+
+            List<String> signature = new ArrayList<>(partitionKeyColumnNames.size());
+            for (String columnName : partitionKeyColumnNames)
+            {
+                String type = columnTypes.get(columnName);
+                if (type == null)
+                {
+                    // partition key references a column we couldn't resolve a type for
+                    return PartitionKeySignature.indeterminate();
+                }
+                signature.add(type);
+            }
+            return PartitionKeySignature.of(signature);
+        }
+        catch (RuntimeException e)
+        {
+            // never let a schema-parsing edge case break the whole refresh cycle — fail safe
+            return PartitionKeySignature.indeterminate();
+        }
+    }
+
+    /**
+     * Parses the partition-key column names, in order, from the inner content of a
+     * {@code PRIMARY KEY (...)} clause — e.g. {@code "(colA, colB), colC"} (composite partition
+     * key) or {@code "colA, colB"} (single-column partition key, colA, with colB as a
+     * clustering column) or {@code "colA"} (single-column partition key, no clustering).
+     */
+    private static List<String> parsePartitionKeyColumnNames(String primaryKeyClauseInner)
+    {
+        String inner = primaryKeyClauseInner.trim();
+
+        List<String> topLevelParts = splitTopLevel(inner, ',');
+        if (topLevelParts.isEmpty())
+        {
+            return List.of();
+        }
+
+        String first = topLevelParts.get(0).trim();
+        if (first.startsWith("(") && first.endsWith(")"))
+        {
+            // composite partition key: (colA, colB), colC, ...  or  (colA, colB) with no
+            // clustering columns at all
+            String compositeInner = first.substring(1, first.length() - 1);
+            List<String> names = new ArrayList<>();
+            for (String part : splitTopLevel(compositeInner, ','))
+            {
+                names.add(stripQuotes(part.trim()));
+            }
+            return names;
+        }
+        else
+        {
+            // single-column partition key: colA, colB, colC (colA alone is the partition key)
+            return List.of(stripQuotes(first));
+        }
+    }
+
+    private static String stripQuotes(String identifier)
+    {
+        if (identifier.length() >= 2 && identifier.startsWith("\"") && identifier.endsWith("\""))
+        {
+            return identifier.substring(1, identifier.length() - 1);
+        }
+        return identifier;
+    }
+
+    /**
+     * Finds the index of the whitespace separating a column definition's name from its type,
+     * e.g. {@code id uuid} -&gt; 2. A plain {@code indexOf(' ')} is not sufficient when the
+     * column name is a quoted identifier that itself contains a space (e.g.
+     * {@code "my col" uuid}) — the first space found would be inside the quotes, splitting the
+     * name/type incorrectly. In that case, skip past the closing quote first.
+     *
+     * @return the split index, or -1 if no valid separator could be found
+     */
+    private static int findNameTypeSplitIndex(String part)
+    {
+        if (part.startsWith("\""))
+        {
+            int closingQuote = part.indexOf('"', 1);
+            if (closingQuote < 0)
+            {
+                // unterminated quoted identifier — malformed
+                return -1;
+            }
+            return part.indexOf(' ', closingQuote + 1);
+        }
+        return part.indexOf(' ');
+    }
+
+    private static String normalizeType(String type)
+    {
+        return type.trim().toLowerCase().replaceAll("\\s+", "");
+    }
+
+    /**
+     * Splits {@code s} on top-level occurrences of {@code delimiter}, ignoring any delimiter
+     * nested inside {@code (...)} or {@code <...>} — so CQL constructs like
+     * {@code frozen<map<int, text>>} or {@code PRIMARY KEY ((a, b), c)} split correctly.
+     */
+    private static List<String> splitTopLevel(String s, char delimiter)
+    {
+        List<String> parts = new ArrayList<>();
+        int depth = 0;
+        int start = 0;
+        for (int i = 0; i < s.length(); i++)
+        {
+            char c = s.charAt(i);
+            if (c == '(' || c == '<')
+            {
+                depth++;
+            }
+            else if (c == ')' || c == '>')
+            {
+                depth--;
+            }
+            else if (c == delimiter && depth == 0)
+            {
+                parts.add(s.substring(start, i));
+                start = i + 1;
+            }
+        }
+        parts.add(s.substring(start));
+        return parts;
     }
 
     public static String cleanCql(@NotNull final String cql)

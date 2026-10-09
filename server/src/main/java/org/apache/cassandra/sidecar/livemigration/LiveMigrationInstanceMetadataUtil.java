@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.livemigration;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,6 +37,7 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
+import org.apache.cassandra.sidecar.exceptions.LiveMigrationExceptions.UnknownMigrationPrefixException;
 import org.apache.cassandra.sidecar.handlers.livemigration.LiveMigrationDirType;
 import org.jetbrains.annotations.NotNull;
 
@@ -263,14 +267,40 @@ public class LiveMigrationInstanceMetadataUtil
     }
 
     /**
-     * Converts given live migration file download URL to local path.
+     * Resolves a live migration file download URL to a local path. Performs only a lexical
+     * containment check; symlinks are not resolved and the file is not required to exist.
+     * Suitable for destination-side callers that place files into operator-controlled directories.
+     * Source-side callers that serve existing files in response to remote requests must additionally
+     * call {@link ResolvedPath#verifyContainment()} on the returned object before using the path.
      *
      * @param fileUrl  Live migration file download URL
      * @param metadata Cassandra instance metadata
-     * @return local path for given live migration file download URL
+     * @return lexically-resolved local path for given live migration file download URL
+     * @throws IllegalArgumentException if the URL is malformed or the lexical path escapes
+     *                                  the base directory
      */
     public static Path localPath(@NotNull String fileUrl,
                                  @NotNull InstanceMetadata metadata)
+    {
+        return resolveLexically(fileUrl, metadata).resolvedPath();
+    }
+
+    /**
+     * Lexically resolves a live migration file download URL to a {@link ResolvedPath}. Performs only
+     * string-level validation; the filesystem is not touched and the file is not required to exist.
+     *
+     * @param fileUrl  Live migration file download URL
+     * @param metadata Cassandra instance metadata
+     * @return the lexically-resolved {@link ResolvedPath}
+     * @throws IllegalArgumentException        if the URL is malformed - it contains a relative traversal
+     *                                         segment ({@code /../}) or lexically escapes the configured base directory
+     * @throws UnknownMigrationPrefixException if the URL does not match any configured live-migration directory
+     *                                         prefix; the URL is well-formed but addresses no resource on this
+     *                                         instance. This is a subtype of {@link IllegalArgumentException}, so
+     *                                         callers that only care about "bad URL" need not distinguish it
+     */
+    public static ResolvedPath resolveLexically(@NotNull String fileUrl,
+                                                @NotNull InstanceMetadata metadata)
     {
         Objects.requireNonNull(fileUrl, "fileUrl cannot be null");
         Objects.requireNonNull(metadata, "metadata cannot be null");
@@ -299,11 +329,76 @@ public class LiveMigrationInstanceMetadataUtil
                     throw new IllegalArgumentException(errorMessage);
                 }
 
-                return resolvedPath;
+                return new ResolvedPath(baseDir, resolvedPath);
             }
         }
 
-        throw new IllegalArgumentException("File url " + fileUrl + " is unknown.");
+        LOGGER.warn("File url {} does not match any configured live-migration directory prefix.", fileUrl);
+        throw new UnknownMigrationPrefixException("File url " + fileUrl + " is unknown.");
+    }
+
+    /**
+     * Lexical resolution of a live-migration URL: the configured base directory paired with the
+     * local path it maps to.
+     */
+    public static final class ResolvedPath
+    {
+        private final Path baseDir;
+        private final Path resolvedPath;
+
+        ResolvedPath(Path baseDir, Path resolvedPath)
+        {
+            this.baseDir = baseDir;
+            this.resolvedPath = resolvedPath;
+        }
+
+        public Path resolvedPath()
+        {
+            return resolvedPath;
+        }
+
+        /**
+         * Verifies that the source-side file represented by this {@code ResolvedPath} exists and
+         * that its real (symlinks resolved) path stays inside the real base directory path.
+         * Use this on the source side after
+         * {@link LiveMigrationInstanceMetadataUtil#resolveLexically(String, InstanceMetadata)} to
+         * enforce that the file the operator is about to serve cannot escape the configured
+         * directory through a symlink. Callers continue to use {@link #resolvedPath()} (the
+         * lexical form) for exclusion matching, logging, and serving, since exclusion patterns
+         * and operator-facing logs are configured against the lexical form.
+         *
+         * <p>Performs blocking filesystem I/O - must be called from a worker thread, not the event
+         * loop. Throws {@link NoSuchFileException} before any real-path resolution runs, so
+         * callers can distinguish "file missing" from "path escapes via symlink". The base directory
+         * is only resolved when the file's real path does not already start with it, so a base
+         * directory that is not itself a symlink costs no extra filesystem calls.
+         *
+         * @throws NoSuchFileException      if the resolved file does not exist
+         * @throws IOException              if {@link Path#toRealPath} fails for an I/O reason
+         *                                  other than missing file
+         * @throws IllegalArgumentException if the real path escapes the base directory
+         */
+        public void verifyContainment() throws IOException
+        {
+            if (!Files.exists(resolvedPath))
+            {
+                throw new NoSuchFileException(resolvedPath.toString());
+            }
+            Path realPath = resolvedPath.toRealPath();
+            // When the base directory is not itself behind a symlink, the file's real path still
+            // starts with the lexical base directory, which already proves containment.
+            if (realPath.startsWith(baseDir))
+            {
+                return;
+            }
+            // The base directory itself may be a symlink (for example a data dir pointing at a
+            // mounted volume), so compare against its real path before rejecting.
+            if (!realPath.startsWith(baseDir.toRealPath()))
+            {
+                LOGGER.error("Resolved path escapes base directory for {}", resolvedPath);
+                throw new IllegalArgumentException("Resolved path escapes base directory");
+            }
+        }
     }
 
     private static Map<String, String> migrationUrlLocalDirMap(InstanceMetadata instanceMetadata)

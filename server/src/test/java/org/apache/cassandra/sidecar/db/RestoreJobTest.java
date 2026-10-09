@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.db;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.EnumMap;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -86,6 +88,12 @@ public class RestoreJobTest
         return builder.build();
     }
 
+    public static RestoreJob createFastForwardTestingJob(UUID jobId, RestoreJobStatus status)
+    throws DataObjectMappingException
+    {
+        return createTestingJob(jobId, status).unbuild().fastForwardEnabled(true).build();
+    }
+
     public static RestoreJob createUpdatedJob(UUID jobId, String jobAgent,
                                               RestoreJobStatus status,
                                               RestoreJobSecrets secrets,
@@ -139,6 +147,62 @@ public class RestoreJobTest
                 .isEqualTo(RestoreRangeStatus.SUCCEEDED);
             }
         }
+    }
+
+    @Test
+    void testExpectedNextRangeStatusOfFastForwardJob()
+    {
+        UUID jobId = UUIDs.timeBased();
+        // The expected range status of a fast forward job per job status. It differs from the normal flow in the
+        // CREATED status, where the ranges are staged ahead of the STAGE_READY signal, and in the STAGED status,
+        // where importing has already started instead of waiting for the IMPORT_READY signal.
+        Map<RestoreJobStatus, RestoreRangeStatus> expectedByJobStatus = new EnumMap<>(RestoreJobStatus.class);
+        expectedByJobStatus.put(RestoreJobStatus.CREATED, RestoreRangeStatus.STAGED);
+        expectedByJobStatus.put(RestoreJobStatus.STAGE_READY, RestoreRangeStatus.STAGED);
+        expectedByJobStatus.put(RestoreJobStatus.STAGED, RestoreRangeStatus.SUCCEEDED);
+        expectedByJobStatus.put(RestoreJobStatus.IMPORT_READY, RestoreRangeStatus.SUCCEEDED);
+
+        expectedByJobStatus.forEach((jobStatus, expectedRangeStatus) ->
+                                    assertThat(createFastForwardTestingJob(jobId, jobStatus).expectedNextRangeStatus())
+                                    .describedAs("Expecting the ranges of a fast forward job in " + jobStatus +
+                                                 " status to enter " + expectedRangeStatus)
+                                    .isEqualTo(expectedRangeStatus));
+    }
+
+    @Test
+    void testPhaseGatesOfRegularJob()
+    {
+        UUID jobId = UUIDs.timeBased();
+        for (RestoreJobStatus status : RestoreJobStatus.values())
+        {
+            RestoreJob job = createTestingJob(jobId, status);
+            assertThat(job.shouldStageNow()).isEqualTo(status == RestoreJobStatus.STAGE_READY);
+            assertThat(job.shouldImportNow()).isEqualTo(status == RestoreJobStatus.IMPORT_READY);
+        }
+    }
+
+    @Test
+    void testPhaseGatesOfFastForwardJob()
+    {
+        UUID jobId = UUIDs.timeBased();
+        for (RestoreJobStatus status : RestoreJobStatus.values())
+        {
+            RestoreJob job = createFastForwardTestingJob(jobId, status);
+            assertThat(job.shouldStageNow())
+            .describedAs("Expecting a fast forward job to stage in both CREATED and STAGE_READY status. status=" + status)
+            .isEqualTo(status == RestoreJobStatus.CREATED || status == RestoreJobStatus.STAGE_READY);
+            assertThat(job.shouldImportNow())
+            .describedAs("Expecting a fast forward job to import in both STAGED and IMPORT_READY status. status=" + status)
+            .isEqualTo(status == RestoreJobStatus.STAGED || status == RestoreJobStatus.IMPORT_READY);
+        }
+    }
+
+    @Test
+    void testFastForwardEnabledPreservedThroughUnbuild()
+    {
+        RestoreJob job = createFastForwardTestingJob(UUIDs.timeBased(), RestoreJobStatus.CREATED);
+        assertThat(job.fastForwardEnabled).isTrue();
+        assertThat(job.unbuild().build().fastForwardEnabled).isTrue();
     }
 
     @Test
