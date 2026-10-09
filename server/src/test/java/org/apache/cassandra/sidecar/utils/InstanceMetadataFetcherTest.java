@@ -69,6 +69,28 @@ class InstanceMetadataFetcherTest
         .hasMessageContaining("All local Cassandra nodes are exhausted. But none is available");
     }
 
+    @Test
+    void testSidecarInstanceIdResolvesManagedHost()
+    {
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false),
+                                                         instance(2, "127.0.0.2", false),
+                                                         instance(3, "127.0.0.3", false));
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolvers.DEFAULT);
+        InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
+        assertThat(fetcher.sidecarInstanceId("127.0.0.1")).isEqualTo(1);
+        assertThat(fetcher.sidecarInstanceId("127.0.0.2")).isEqualTo(2);
+        assertThat(fetcher.sidecarInstanceId("127.0.0.3")).isEqualTo(3);
+    }
+
+    @Test
+    void testSidecarInstanceIdReturnsNullForUnmanagedHost()
+    {
+        List<InstanceMetadata> instances = Arrays.asList(instance(1, "127.0.0.1", false));
+        InstancesMetadataImpl instancesMetadata = new InstancesMetadataImpl(instances, DnsResolvers.DEFAULT);
+        InstanceMetadataFetcher fetcher = new InstanceMetadataFetcher(instancesMetadata);
+        assertThat(fetcher.sidecarInstanceId("127.0.0.99")).isNull();
+    }
+
     private InstanceMetadata instance(int id, String host, boolean isAvailable)
     {
         InstanceMetadataImpl.Builder builder = InstanceMetadataImpl.builder()
