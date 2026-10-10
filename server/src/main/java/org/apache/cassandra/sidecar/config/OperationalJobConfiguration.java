@@ -29,4 +29,24 @@ public interface OperationalJobConfiguration
      * @return the time-to-live for operational job tables
      */
     SecondBoundConfiguration tablesTtl();
+
+    /**
+     * @return whether operational job coordination is enabled
+     */
+    boolean coordinationEnabled();
+
+    /**
+     * @return whether durable operational job tacking is enabled
+     */
+    boolean durableTrackingEnabled();
+
+    /**
+     * @return the polling interval for the local job coordinator
+     */
+    SecondBoundConfiguration localJobCoordinationDelay();
+
+    /**
+     * @return the maximum time a node's local job may execute before it is marked failed
+     */
+    SecondBoundConfiguration nodeExecutionTimeout();
 }
