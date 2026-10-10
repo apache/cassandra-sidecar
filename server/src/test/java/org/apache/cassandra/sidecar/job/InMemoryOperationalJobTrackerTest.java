@@ -229,4 +229,21 @@ class InMemoryOperationalJobTrackerTest
 
         assertThat(inflightJobs).isEmpty();
     }
+
+    @Test
+    void testInflightJobsReturnsInflightJobsFromMap()
+    {
+        OperationalJob createdJob = createOperationalJob(CREATED);
+        OperationalJob runningJob = createOperationalJob(RUNNING);
+        jobTracker.put(createdJob);
+        jobTracker.put(runningJob);
+        jobTracker.put(job1);
+
+        List<OperationalJobInfo> inflightJobs = jobTracker.inflightJobs();
+
+        assertThat(inflightJobs)
+            .describedAs("Only CREATED and RUNNING jobs are inflight")
+            .extracting(OperationalJobInfo::jobId)
+            .containsExactlyInAnyOrder(createdJob.jobId(), runningJob.jobId());
+    }
 }
