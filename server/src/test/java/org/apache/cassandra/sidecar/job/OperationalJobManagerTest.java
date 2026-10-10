@@ -218,7 +218,7 @@ class OperationalJobManagerTest
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
-        when(coordinator.trySetActive(any(), any())).thenReturn(true);
+        when(coordinator.trySetActive(any(), any(), any())).thenReturn(true);
         OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -230,8 +230,8 @@ class OperationalJobManagerTest
 
         manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
-        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId());
-        verify(coordinator, timeout(5000)).clearActive(OperationType.MOVE, job.jobId());
+        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId(), null);
+        verify(coordinator, timeout(5000)).clearActive(OperationType.MOVE, job.jobId(), null);
     }
 
     @Test
@@ -239,7 +239,7 @@ class OperationalJobManagerTest
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
-        when(coordinator.trySetActive(any(), any())).thenReturn(false);
+        when(coordinator.trySetActive(any(), any(), any())).thenReturn(false);
         OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -257,7 +257,7 @@ class OperationalJobManagerTest
         assertThat(tracked.status()).isEqualTo(FAILED);
         assertThat(tracked.failureReason()).contains("An active operation already exists");
         assertThat(tracker.inflightJobsByOperation(job.name())).doesNotContain(job);
-        verify(coordinator, never()).clearActive(any(), any());
+        verify(coordinator, never()).clearActive(any(), any(), any());
     }
 
     @Test
@@ -289,7 +289,7 @@ class OperationalJobManagerTest
     {
         OperationalJobTracker tracker = new InMemoryOperationalJobTracker(4);
         OperationalJobCoordinator coordinator = mock(OperationalJobCoordinator.class);
-        when(coordinator.trySetActive(any(), any())).thenReturn(true);
+        when(coordinator.trySetActive(any(), any(), any())).thenReturn(true);
         OperationalJobManager manager = new OperationalJobManager(tracker, coordinator, executorPool);
         CountDownLatch latch = new CountDownLatch(1);
 
@@ -303,8 +303,8 @@ class OperationalJobManagerTest
 
         manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
-        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId());
-        verify(coordinator, after(1000).never()).clearActive(any(), any());
+        verify(coordinator).trySetActive(OperationType.MOVE, job.jobId(), null);
+        verify(coordinator, after(1000).never()).clearActive(any(), any(), any());
     }
 
     @Test
@@ -323,7 +323,19 @@ class OperationalJobManagerTest
 
         manager.trySubmitJob(job, onComplete, executorPool.service(), SecondBoundConfiguration.parse("5s"));
         assertThat(latch.await(10, TimeUnit.SECONDS)).isTrue();
-        verify(coordinator, never()).trySetActive(any(), any());
+        verify(coordinator, never()).trySetActive(any(), any(), any());
+    }
+
+    @Test
+    void testAllInflightJobsDelegatesToTracker()
+    {
+        OperationalJobTracker tracker = mock(OperationalJobTracker.class);
+        List<OperationalJobInfo> inflight = List.of(mock(OperationalJobInfo.class));
+        when(tracker.inflightJobs()).thenReturn(inflight);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
+
+        assertThat(manager.allInflightJobs()).isEqualTo(inflight);
+        verify(tracker).inflightJobs();
     }
 
     private static OperationalJob createCoordinatedJob(UUID jobId)

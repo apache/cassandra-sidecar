@@ -44,15 +44,15 @@ public class StorageBackedOperationalJobCoordinator implements OperationalJobCoo
     }
 
     @Override
-    public boolean trySetActive(OperationType operationType, UUID operationId)
+    public boolean trySetActive(OperationType operationType, UUID operationId, @Nullable String targetDatacenter)
     {
-        return storageProvider.trySetActiveOperation(operationType, operationId);
+        return storageProvider.trySetActiveOperation(operationType, operationId, targetDatacenter);
     }
 
     @Override
-    public boolean clearActive(OperationType operationType, UUID operationId)
+    public boolean clearActive(OperationType operationType, UUID operationId, @Nullable String targetDatacenter)
     {
-        return storageProvider.clearActiveOperation(operationType, operationId);
+        return storageProvider.clearActiveOperation(operationType, operationId, targetDatacenter);
     }
 
     @Override

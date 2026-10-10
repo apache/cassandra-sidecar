@@ -40,7 +40,7 @@ class DisabledOperationalJobCoordinatorTest
     void testTrySetActiveThrows()
     {
         UUID operationId = UUIDs.timeBased();
-        assertThatThrownBy(() -> coordinator.trySetActive(OperationType.MOVE, operationId))
+        assertThatThrownBy(() -> coordinator.trySetActive(OperationType.MOVE, operationId, null))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("coordination is not supported by this Sidecar instance");
     }
@@ -49,7 +49,7 @@ class DisabledOperationalJobCoordinatorTest
     void testClearActiveThrows()
     {
         UUID operationId = UUIDs.timeBased();
-        assertThatThrownBy(() -> coordinator.clearActive(OperationType.MOVE, operationId))
+        assertThatThrownBy(() -> coordinator.clearActive(OperationType.MOVE, operationId, null))
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("coordination is not supported by this Sidecar instance");
     }

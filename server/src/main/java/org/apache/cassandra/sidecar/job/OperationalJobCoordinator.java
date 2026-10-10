@@ -34,14 +34,15 @@ public interface OperationalJobCoordinator
 {
     /**
      * Attempt to set an operation as active. Implementations must ensure mutual exclusion
-     * so that only one operation of the given type is active at a time.
+     * so that only one operation of the given type is active at a time within a datacenter.
      *
-     * @param operationType the type of operation
-     * @param operationId   the unique identifier for this operation
+     * @param operationType     the type of operation
+     * @param operationId       the unique identifier for this operation
+     * @param targetDatacenter  the datacenter to acquire the lock in, or {@code null} to use the local datacenter
      * @return {@code true} if the operation was successfully set as active,
-     *         {@code false} if an operation of the same type is already active
+     *         {@code false} if an operation of the same type is already active in the target datacenter
      */
-    boolean trySetActive(OperationType operationType, UUID operationId);
+    boolean trySetActive(OperationType operationType, UUID operationId, @Nullable String targetDatacenter);
 
     /**
      * Clear the active operation lock, but only if the provided operation ID matches
@@ -52,12 +53,13 @@ public interface OperationalJobCoordinator
      * the one that finishes it. Clearing is the responsibility of the orchestration layer
      * once all participating nodes have completed their work.
      *
-     * @param operationType the type of operation
-     * @param operationId   the operation ID to clear
+     * @param operationType    the type of operation
+     * @param operationId      the operation ID to clear
+     * @param targetDatacenter the datacenter the lock was acquired in, or {@code null} to use the local datacenter;
      * @return {@code true} if the active operation was cleared,
      *         {@code false} if the provided operation ID did not match the active one
      */
-    boolean clearActive(OperationType operationType, UUID operationId);
+    boolean clearActive(OperationType operationType, UUID operationId, @Nullable String targetDatacenter);
 
     /**
      * Get the active operation ID for a given operation type.

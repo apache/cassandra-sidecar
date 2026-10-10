@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.job;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -88,28 +89,39 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
     @Override
     public OperationalJob computeIfAbsent(UUID jobId, Function<UUID, OperationalJob> mappingFunction)
     {
-        if (!storageProvider.isAvailable())
-        {
-            throw new IllegalStateException("Storage provider is not available");
-        }
-
         InvocationTrackingFunction<UUID, OperationalJob> mappingFunctionTracker =
         new InvocationTrackingFunction<>(mappingFunction);
         OperationalJob job = liveJobs.computeIfAbsent(jobId, mappingFunctionTracker);
 
         if (mappingFunctionTracker.wasInvoked())
         {
-            persistInitialRecord(job, 1);
+            boolean activatingCoordinatedJob = job.requiresCoordination()
+                                               && job.nodeExecutionOrder() != null
+                                               && !job.asyncResult().isComplete();
+            persistInitialRecord(job, activatingCoordinatedJob, 1);
         }
 
         return job;
     }
 
-    private void persistInitialRecord(OperationalJob job, int attempt)
+    private void persistInitialRecord(OperationalJob job, boolean activatingCoordinatedJob, int attempt)
     {
-        executor.runBlocking(() -> storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job)))
+        executor.runBlocking(() -> {
+                    storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
+                    if (activatingCoordinatedJob)
+                    {
+                        seedNodeStatuses(job);
+                        // Currently only support job submission that executes immediately
+                        storageProvider.updateJobStatus(job.jobId(), job.operationType(),
+                                                        OperationalJobStatus.RUNNING, null);
+                    }
+                })
                 .onSuccess(v -> job.asyncResult().onComplete(ar -> {
-                    updateTerminalStatus(job);
+                    // The coordinator owns updating the terminal status of coordinated jobs
+                    if (!job.requiresCoordination())
+                    {
+                        updateTerminalStatus(job);
+                    }
                     liveJobs.remove(job.jobId());
                 }))
                 .onFailure(e -> {
@@ -120,7 +132,8 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                         // Add jitter so that concurrent sidecar processes retrying against the same transient
                         // Cassandra blip do not all retry in lockstep
                         long delay = RETRY_DELAY_MS * attempt + ThreadLocalRandom.current().nextLong(RETRY_JITTER_MS);
-                        executor.setTimer(delay, id -> persistInitialRecord(job, attempt + 1));
+                        executor.setTimer(delay,
+                                          id -> persistInitialRecord(job, activatingCoordinatedJob, attempt + 1));
                     }
                     else
                     {
@@ -168,6 +181,53 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                                     (j.status() == OperationalJobStatus.RUNNING ||
                                      j.status() == OperationalJobStatus.CREATED))
                        .collect(Collectors.toList());
+    }
+
+    @NotNull
+    @Override
+    public List<OperationalJobInfo> inflightJobs()
+    {
+        Map<UUID, OperationalJobInfo> merged = new LinkedHashMap<>(liveJobs);
+
+        // Coordinated jobs are removed from liveJobs almost immediately after handoff but might be still 
+        // running. Therefore, we fetch those active operations from storage 
+        for (UUID activeJobId : storageProvider.getActiveOperations().values())
+        {
+            if (merged.containsKey(activeJobId))
+            {
+                continue;
+            }
+            OperationalJobRecord record = storageProvider.findJob(activeJobId);
+            if (record != null)
+            {
+                merged.put(activeJobId, enrichWithNodeStatuses(record));
+            }
+        }
+
+        return merged.values()
+                     .stream()
+                     .filter(job -> !job.status().isCompleted())
+                     .collect(Collectors.toList());
+    }
+
+    /**
+     * Adds a {@link OperationalJobStatus#CREATED} for every node in the job's execution order.
+     */
+    private void seedNodeStatuses(OperationalJob job)
+    {
+        List<List<UUID>> executionOrder = job.nodeExecutionOrder();
+        if (executionOrder == null)
+        {
+            return;
+        }
+        List<UUID> nodeIds = executionOrder.stream()
+                                           .flatMap(List::stream)
+                                           .collect(Collectors.toList());
+        if (nodeIds.isEmpty())
+        {
+            return;
+        }
+        storageProvider.updateNodeStatuses(job.jobId(), nodeIds, OperationalJobStatus.CREATED);
     }
 
     /**

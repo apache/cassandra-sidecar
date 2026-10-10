@@ -41,13 +41,13 @@ public class DisabledOperationalJobCoordinator implements OperationalJobCoordina
     + "Configure a coordinator to enable coordinated cluster-wide operations.";
 
     @Override
-    public boolean trySetActive(OperationType operationType, UUID operationId)
+    public boolean trySetActive(OperationType operationType, UUID operationId, @Nullable String targetDatacenter)
     {
         throw new UnsupportedOperationException(NOT_SUPPORTED_MESSAGE);
     }
 
     @Override
-    public boolean clearActive(OperationType operationType, UUID operationId)
+    public boolean clearActive(OperationType operationType, UUID operationId, @Nullable String targetDatacenter)
     {
         throw new UnsupportedOperationException(NOT_SUPPORTED_MESSAGE);
     }

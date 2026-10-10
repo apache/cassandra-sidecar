@@ -89,19 +89,21 @@ public interface StorageProvider extends Closeable
     // --- Active Operation Coordination ---
 
     /**
-     * Set an operation as active if no other operation of the same type is currently active.
+     * Set an operation as active if no other operation of the same type is currently active
+     * in the target datacenter.
      * <p>
      * Implementations must provide compare-and-set (CAS) semantics to ensure only one active
-     * operation of a given type runs at a time across the cluster. This lock is per operation
+     * operation of a given type runs at a time within a datacenter. This lock is per operation
      * plan, not per node; within a single operation, multiple nodes may be operated on
      * concurrently as defined by the node execution order.
      *
-     * @param operationType the operation type
-     * @param operationId   the unique identifier for this operation
+     * @param operationType    the operation type
+     * @param operationId      the unique identifier for this operation
+     * @param targetDatacenter the datacenter to acquire the lock in, or {@code null} to use the local datacenter
      * @return {@code true} if the operation was successfully set as active, {@code false} if
-     *         an operation of the same type is already active (including the same operation ID)
+     *         an operation of the same type is already active in the target datacenter
      */
-    boolean trySetActiveOperation(OperationType operationType, UUID operationId);
+    boolean trySetActiveOperation(OperationType operationType, UUID operationId, @Nullable String targetDatacenter);
 
     /**
      * Get the active operation ID for a given operation type.
@@ -125,12 +127,13 @@ public interface StorageProvider extends Closeable
      * Clear the active operation lock, but only if the provided operation ID matches
      * the currently active one.
      *
-     * @param operationType the operation type
-     * @param operationId   the operation ID to clear
+     * @param operationType    the operation type
+     * @param operationId      the operation ID to clear
+     * @param targetDatacenter the datacenter the lock was acquired in, or {@code null} to use the local datacenter;
      * @return {@code true} if the active operation was cleared, {@code false} if the provided
      *         operation ID did not match the active one
      */
-    boolean clearActiveOperation(OperationType operationType, UUID operationId);
+    boolean clearActiveOperation(OperationType operationType, UUID operationId, @Nullable String targetDatacenter);
 
     // --- Node Status Tracking ---
 

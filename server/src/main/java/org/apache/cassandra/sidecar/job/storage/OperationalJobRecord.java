@@ -233,7 +233,11 @@ public class OperationalJobRecord implements OperationalJobInfo
         return builder().jobId(job.jobId())
                         .operationType(job.operationType())
                         .status(job.status())
+                        .startTime(job.startTime())
                         .lastUpdate(Instant.now())
+                        .failureReason(job.failureReason())
+                        .nodeExecutionOrder(job.nodeExecutionOrder())
+                        .operationMetadata(job.operationMetadata())
                         .build();
     }
 
