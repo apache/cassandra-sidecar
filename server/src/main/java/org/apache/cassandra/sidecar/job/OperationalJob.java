@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -199,6 +200,24 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     public boolean releasesOnCompletion()
     {
         return true;
+    }
+
+    /**
+     * @return the ordered list of parallel node groups for execution, or null if not applicable
+     */
+    @Nullable
+    public List<List<UUID>> nodeExecutionOrder()
+    {
+        return null;
+    }
+
+    /**
+     * @return metadata associated with this operation, or null if not applicable
+     */
+    @Nullable
+    public Map<String, String> operationMetadata()
+    {
+        return null;
     }
 
     @Override
