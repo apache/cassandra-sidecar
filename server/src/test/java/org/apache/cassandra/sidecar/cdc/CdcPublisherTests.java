@@ -70,6 +70,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 /**
@@ -160,6 +161,22 @@ public class CdcPublisherTests
     }
 
     /**
+     * Log-only must not require Kafka producer configuration, so the producer factory must never be
+     * reached. Asserting only the returned type would still pass if a producer were built and then
+     * discarded.
+     */
+    @Test
+    void testEventConsumerBuildsNoKafkaProducerWhenLogOnly()
+    {
+        setupVersionMocks();
+        when(cdcConfig.logOnly()).thenReturn(true);
+
+        cdcPublisher.eventConsumer(cdcConfig);
+
+        verifyNoInteractions(kafkaProducerFactory);
+    }
+
+    /**
      * Verifies that construction captures the Cdc enabled/disabled lifecycle stat depending on
      * {@link CdcConfig#cdcEnabled()} at the time the {@link CdcPublisher} is built, mirroring the
      * javadoc contract on {@link SidecarCdcStats#captureCdcDisabled()}: "Cdc disabled and CdcPublisher
@@ -245,6 +262,17 @@ public class CdcPublisherTests
         when(cdcConfig.failOnRecordTooLargeError()).thenReturn(false);
         when(cdcConfig.failOnKafkaError()).thenReturn(true);
 
+        setupVersionMocks();
+        when(kafkaProducerFactory.create(any())).thenReturn(mock(KafkaProducer.class));
+    }
+
+    /**
+     * Stubs only the chain {@link CdcPublisher#eventConsumer} walks to resolve the Cassandra
+     * version. Kept separate from {@link #setupMocks} so that the log-only case can assert the
+     * Kafka producer factory was never touched, without a stubbing on it to explain away.
+     */
+    private void setupVersionMocks()
+    {
         InstanceMetadata mockInstance = mock(InstanceMetadata.class, RETURNS_DEEP_STUBS);
         when(mockInstance.delegate().nodeSettings().releaseVersion()).thenReturn("4.1.0");
         doAnswer(invocation -> {
@@ -255,7 +283,6 @@ public class CdcPublisherTests
         CassandraBridge mockBridge = mock(CassandraBridge.class);
         when(mockBridge.getVersion()).thenReturn(CassandraVersion.FOURONE);
         when(cassandraBridgeFactory.get(anyString())).thenReturn(mockBridge);
-        when(kafkaProducerFactory.create(any())).thenReturn(mock(KafkaProducer.class));
     }
 
 
