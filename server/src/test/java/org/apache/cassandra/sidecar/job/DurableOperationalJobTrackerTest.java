@@ -47,6 +47,7 @@ import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.CREA
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.RUNNING;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.SUCCEEDED;
+import static org.apache.cassandra.sidecar.job.OperationalJobTest.createCoordinatedOperationalJob;
 import static org.apache.cassandra.sidecar.job.OperationalJobTest.createOperationalJob;
 import static org.apache.cassandra.testing.utils.AssertionUtils.loopAssert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -78,7 +79,6 @@ class DurableOperationalJobTrackerTest
     void setUp()
     {
         storageProvider = mock(StorageProvider.class);
-        when(storageProvider.isAvailable()).thenReturn(true);
         vertx = Vertx.vertx();
         executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         executorPool = executorPools.internal();
@@ -324,14 +324,31 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
-    void testComputeIfAbsentFailsWhenStorageUnavailable()
+    void testComputeIfAbsentDegradesForNonCoordinatedJobWhenStorageUnavailable()
     {
-        when(storageProvider.isAvailable()).thenReturn(false);
+        doThrow(new StorageProviderException("Storage unavailable")).when(storageProvider).persistJob(any());
         OperationalJob job = createOperationalJob(CREATED);
 
-        assertThatThrownBy(() -> tracker.computeIfAbsent(job.jobId(), id -> job))
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessage("Storage provider is not available");
+        OperationalJob result = tracker.computeIfAbsent(job.jobId(), id -> job);
+
+        assertThat(result).isSameAs(job);
+        loopAssert(2, () -> verify(storageProvider).persistJob(any()));
+        assertThat(tracker.jobsView()).containsKey(job.jobId());
+    }
+
+    @Test
+    void testFailedToStartCoordinatedJobIsNotSeededOrMarkedRunning()
+    {
+        UUID jobId = UUIDs.timeBased();
+        UUID node = UUIDs.timeBased();
+        OperationalJob job = createCoordinatedOperationalJob(jobId, List.of(List.of(node)));
+        job.failToStart(new RuntimeException("An active operation already exists"));
+
+        tracker.computeIfAbsent(jobId, id -> job);
+
+        loopAssert(2, () -> verify(storageProvider).persistJob(any()));
+        verify(storageProvider, never()).updateNodeStatuses(any(), any(), any());
+        verify(storageProvider, never()).updateJobStatus(any(), any(), eq(RUNNING), any());
     }
 
     @Test
@@ -440,6 +457,76 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
+    void testCoordinatedJobSkipsTerminalStatusUpdate() throws InterruptedException
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = createCoordinatedOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+        CountDownLatch latch = new CountDownLatch(1);
+
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+
+        job.asyncResult().onComplete(ar -> latch.countDown());
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        loopAssert(2, () -> {
+            assertThat(tracker.jobsView()).doesNotContainKey(jobId);
+            verify(storageProvider, never()).updateJobStatus(any(), any(), any(), any());
+        });
+    }
+
+    @Test
+    void testNonCoordinatedJobStillUpdatesTerminalStatus() throws InterruptedException
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = OperationalJobTest.createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+        CountDownLatch latch = new CountDownLatch(1);
+
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+
+        job.asyncResult().onComplete(ar -> latch.countDown());
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        loopAssert(2, () -> {
+            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
+        });
+    }
+
+    @Test
+    void testCoordinatedJobSeedsNodeStatusesAndMarksRunningOnCreate()
+    {
+        UUID jobId = UUIDs.timeBased();
+        UUID node1 = UUIDs.timeBased();
+        UUID node2 = UUIDs.timeBased();
+        UUID node3 = UUIDs.timeBased();
+        OperationalJob job = createCoordinatedOperationalJob(jobId,
+                                                            List.of(List.of(node1, node2), List.of(node3)));
+
+        tracker.computeIfAbsent(jobId, id -> job);
+
+        loopAssert(2, () -> {
+            verify(storageProvider).updateNodeStatuses(jobId, List.of(node1, node2, node3), CREATED);
+            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(RUNNING), isNull());
+        });
+    }
+
+    @Test
+    void testNonCoordinatedJobDoesNotSeedNodeStatuses()
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = createOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
+
+        tracker.computeIfAbsent(jobId, id -> job);
+
+        loopAssert(2, () -> {
+            verify(storageProvider).persistJob(any());
+            verify(storageProvider, never()).updateNodeStatuses(any(), any(), any());
+            verify(storageProvider, never()).updateJobStatus(any(), any(), eq(RUNNING), any());
+        });
+    }
+
+    @Test
     void testOnCompleteRetrySucceedsAfterTransientFailure() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
@@ -524,4 +611,93 @@ class DurableOperationalJobTrackerTest
             assertThat(tracker.jobsView()).doesNotContainKey(jobId);
         });
     }
+
+    @Test
+    void testInflightJobsMergesLiveJobsWithActiveStorageRecords()
+    {
+        UUID coordinatedJobId = UUIDs.timeBased();
+        OperationalJobRecord record = OperationalJobRecord.builder()
+                                                          .jobId(coordinatedJobId)
+                                                          .operationType(OperationType.DRAIN)
+                                                          .status(RUNNING)
+                                                          .build();
+        when(storageProvider.getActiveOperations()).thenReturn(Map.of(OperationType.DRAIN, coordinatedJobId));
+        when(storageProvider.findJob(coordinatedJobId)).thenReturn(record);
+        when(storageProvider.getNodeStatusesForOperation(coordinatedJobId)).thenReturn(Collections.emptyMap());
+
+        OperationalJob liveJob = createOperationalJob(CREATED);
+        tracker.computeIfAbsent(liveJob.jobId(), id -> liveJob);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).hasSize(2);
+        assertThat(inflight).extracting(OperationalJobInfo::jobId)
+                            .containsExactlyInAnyOrder(liveJob.jobId(), coordinatedJobId);
+    }
+
+    @Test
+    void testInflightJobsPrefersLiveJobAndSkipsStorageLookupForSameId()
+    {
+        UUID jobId = UUIDs.timeBased();
+        UUID node = UUIDs.timeBased();
+        when(storageProvider.getActiveOperations()).thenReturn(Map.of(OperationType.DRAIN, jobId));
+        OperationalJob liveJob = createCoordinatedOperationalJob(jobId, List.of(List.of(node)));
+        tracker.computeIfAbsent(jobId, id -> liveJob);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).hasSize(1);
+        assertThat(inflight.get(0)).isSameAs(liveJob);
+        verify(storageProvider, never()).findJob(jobId);
+    }
+
+    @Test
+    void testInflightJobsEnrichesStorageRecordsWithNodeStatuses()
+    {
+        UUID coordinatedJobId = UUIDs.timeBased();
+        UUID pendingNode = UUIDs.timeBased();
+        UUID runningNode = UUIDs.timeBased();
+        OperationalJobRecord record = OperationalJobRecord.builder()
+                                                          .jobId(coordinatedJobId)
+                                                          .operationType(OperationType.DRAIN)
+                                                          .status(RUNNING)
+                                                          .build();
+        when(storageProvider.getActiveOperations()).thenReturn(Map.of(OperationType.DRAIN, coordinatedJobId));
+        when(storageProvider.findJob(coordinatedJobId)).thenReturn(record);
+        Map<UUID, OperationalJobStatus> nodeStatuses = new HashMap<>();
+        nodeStatuses.put(pendingNode, CREATED);
+        nodeStatuses.put(runningNode, RUNNING);
+        when(storageProvider.getNodeStatusesForOperation(coordinatedJobId)).thenReturn(nodeStatuses);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).hasSize(1);
+        assertThat(inflight.get(0).nodesPending()).containsExactly(pendingNode);
+        assertThat(inflight.get(0).nodesExecuting()).containsExactly(runningNode);
+    }
+
+    @Test
+    void testInflightJobsExcludesCompletedLiveJobs()
+    {
+        OperationalJob completedJob = createOperationalJob(SUCCEEDED);
+        tracker.computeIfAbsent(completedJob.jobId(), id -> completedJob);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).isEmpty();
+    }
+
+    @Test
+    void testInflightJobsSkipsActiveOperationMissingFromStorage()
+    {
+        UUID coordinatedJobId = UUIDs.timeBased();
+        when(storageProvider.getActiveOperations()).thenReturn(Map.of(OperationType.DRAIN, coordinatedJobId));
+        when(storageProvider.findJob(coordinatedJobId)).thenReturn(null);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).isEmpty();
+        verify(storageProvider).findJob(coordinatedJobId);
+    }
+
 }

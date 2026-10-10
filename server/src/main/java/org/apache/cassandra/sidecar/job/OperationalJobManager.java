@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.job;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,10 +70,7 @@ public class OperationalJobManager
      */
     public List<OperationalJobInfo> allInflightJobs()
     {
-        return jobTracker.jobsView().values()
-                         .stream()
-                         .filter(j -> !j.status().isCompleted())
-                         .collect(Collectors.toList());
+        return jobTracker.inflightJobs();
     }
 
     /**
@@ -197,7 +193,8 @@ public class OperationalJobManager
      */
     private Future<Boolean> acquireActiveOperationLock(OperationalJob job)
     {
-        return internalExecutorPool.executeBlocking(() -> coordinator.trySetActive(job.operationType(), job.jobId()), false);
+        return internalExecutorPool.executeBlocking(() -> coordinator.trySetActive(job.operationType(), job.jobId(),
+                                                                                   job.targetDatacenter()), false);
     }
 
     /**
@@ -209,7 +206,8 @@ public class OperationalJobManager
      */
     private void releaseActiveOperationLock(OperationalJob job)
     {
-        internalExecutorPool.executeBlocking(() -> coordinator.clearActive(job.operationType(), job.jobId()), false)
+        internalExecutorPool.executeBlocking(() -> coordinator.clearActive(job.operationType(), job.jobId(),
+                                                                           job.targetDatacenter()), false)
                             .onFailure(e -> logger.error("Failed to clear active operation lock. jobId={} operationType={}",
                                                          job.jobId(), job.operationType(), e));
     }
@@ -230,6 +228,7 @@ public class OperationalJobManager
                                                        + job.operationType() + "', reason='" + cause.getMessage() + '\'');
         }
         return new OperationalJobConflictException("An active operation already exists. operationType='"
-                                                   + job.operationType() + '\'');
+                                                   + job.operationType() + "' datacenter='"
+                                                   + job.targetDatacenter() + '\'');
     }
 }

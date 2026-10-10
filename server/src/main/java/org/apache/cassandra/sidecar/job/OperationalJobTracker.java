@@ -70,4 +70,12 @@ public interface OperationalJobTracker
      */
     @NotNull
     List<OperationalJob> inflightJobsByOperation(String operation);
+
+    /**
+     * Returns all inflight (CREATED or RUNNING) jobs tracked by this Sidecar.
+     *
+     * @return list of inflight job info
+     */
+    @NotNull
+    List<OperationalJobInfo> inflightJobs();
 }

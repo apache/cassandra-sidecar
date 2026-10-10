@@ -129,6 +129,98 @@ class OperationalJobTest
         };
     }
 
+    public static OperationalJob createCoordinatedOperationalJob(UUID jobId, DurationSpec jobDuration)
+    {
+        return createCoordinatedOperationalJob(jobId, jobDuration, null);
+    }
+
+    public static OperationalJob createCoordinatedOperationalJob(UUID jobId, DurationSpec jobDuration, OperationalJobException jobFailure)
+    {
+        return new OperationalJob(jobId)
+        {
+            @Override
+            public boolean hasConflict(List<OperationalJob> jobs)
+            {
+                return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
+            }
+
+            @Override
+            public boolean requiresCoordination()
+            {
+                return true;
+            }
+
+            @Override
+            protected Future<Void> executeInternal() throws OperationalJobException
+            {
+                if (jobDuration != null)
+                {
+                    Uninterruptibles.sleepUninterruptibly(jobDuration.quantity(), jobDuration.unit());
+                }
+
+                if (jobFailure != null)
+                {
+                    throw jobFailure;
+                }
+                return Future.succeededFuture();
+            }
+
+            @Override
+            public String name()
+            {
+                return "Coordinated Operation";
+            }
+        };
+    }
+
+    public static OperationalJob createCoordinatedOperationalJob(UUID jobId, List<List<UUID>> nodeExecutionOrder)
+    {
+        return new OperationalJob(jobId)
+        {
+            @Override
+            public boolean hasConflict(List<OperationalJob> jobs)
+            {
+                return false;
+            }
+
+            @Override
+            public OperationType operationType()
+            {
+                return OperationType.DRAIN;
+            }
+
+            @Override
+            public boolean requiresCoordination()
+            {
+                return true;
+            }
+
+            @Override
+            public List<List<UUID>> nodeExecutionOrder()
+            {
+                return nodeExecutionOrder;
+            }
+
+            @Override
+            protected Future<Void> executeInternal()
+            {
+                return Future.succeededFuture();
+            }
+
+            @Override
+            public String name()
+            {
+                return "Coordinated Operation";
+            }
+        };
+    }
+
     public static OperationalJob createOperationalJob(UUID jobId, DurationSpec jobDuration)
     {
         return createOperationalJob(jobId, jobDuration, null);
