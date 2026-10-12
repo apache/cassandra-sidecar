@@ -22,7 +22,6 @@ package org.apache.cassandra.sidecar.cdc;
 import com.google.inject.Inject;
 import org.apache.avro.Schema;
 import org.apache.cassandra.bridge.CassandraBridge;
-import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
 import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
@@ -55,6 +54,6 @@ public class SidecarCqlToAvroSchemaConverter implements CqlToAvroSchemaConverter
 
     public Schema convert(CqlTable cqlTable)
     {
-        return CdcBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge()).convert(cqlTable);
+        return cassandraBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge()).convert(cqlTable);
     }
 }

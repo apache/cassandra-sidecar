@@ -19,106 +19,77 @@
 
 package org.apache.cassandra.sidecar.bridge;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ConcurrentHashMap;
-
-import org.apache.cassandra.bridge.BaseCassandraBridgeFactory;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CassandraVersionFeatures;
+import org.apache.cassandra.bridge.CdcBridge;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
+import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
 import org.jetbrains.annotations.NotNull;
 
-import static org.apache.cassandra.bridge.BaseCassandraBridgeFactory.getCassandraVersion;
-
 /**
- * Factory class for creating Cassandra bridge instances based on version-specific jar files.
+ * Single point for Sidecar to obtain version-specific Cassandra bridges. Sidecar code should use this factory
+ * instead of calling {@link CdcBridgeFactory} directly.
  * <p>
- * This factory maintains a cache of CassandraBridge instances mapped by Cassandra version labels
- * and provides methods to retrieve bridge instances for specific Cassandra versions.
- * Each bridge is loaded from version-specific JAR resources and instantiated using reflection.
+ * All instances are provided by {@link CdcBridgeFactory}, which loads them in one classloader per Cassandra version.
+ * As a result, the returned {@link CassandraBridge} is loaded together with the CDC classes: the {@link CdcBridge}
+ * and the Avro converter ({@link CqlToAvroSchemaConverter}). That classloader contains the Cassandra, bridge and
+ * types jars of a plain {@link CassandraBridge}, plus the Avro converter jar.
+ * <p>
+ * Using a single classloader is required for CDC: types created by one classloader (e.g. UDTs built while parsing
+ * the schema) cannot be cast to the same classes in another, which fails CDC deserialization with a
+ * {@link ClassCastException}.
  */
 public class CassandraBridgeFactory
 {
-    // maps Cassandra version-specific jar name (e.g. 'four-zero') to matching CassandraBridge
-    private final Map<String, CassandraBridge> cassandraBridges;
-
-    public CassandraBridgeFactory()
-    {
-        cassandraBridges = new ConcurrentHashMap<>(CassandraVersion.values().length);
-    }
-
+    /**
+     * @param version Cassandra release version, e.g. {@code "5.0.4"}
+     * @return the Cassandra bridge for the version
+     */
     @NotNull
     public CassandraBridge get(@NotNull String version)
     {
-        return get(getCassandraVersion(version));
+        return CdcBridgeFactory.get(version);
     }
 
+    /**
+     * @param features Cassandra version features
+     * @return the Cassandra bridge for the version
+     */
     @NotNull
     public CassandraBridge get(@NotNull CassandraVersionFeatures features)
     {
-        return get(getCassandraVersion(features));
+        return CdcBridgeFactory.get(features);
     }
 
+    /**
+     * @param version Cassandra version
+     * @return the Cassandra bridge for the version
+     */
     @NotNull
     public CassandraBridge get(@NotNull CassandraVersion version)
     {
-        String jarBaseName = version.jarBaseName();
-        Objects.requireNonNull(jarBaseName, "Cassandra version " + version + " is not supported");
-        return cassandraBridges.computeIfAbsent(jarBaseName, this::create);
+        return CdcBridgeFactory.get(version);
     }
 
+    /**
+     * @param bridge Cassandra bridge obtained from this factory
+     * @return the CDC bridge for the same Cassandra version, loaded in the same classloader as {@code bridge}
+     */
     @NotNull
-    @SuppressWarnings("unchecked")
-    private CassandraBridge create(@NotNull String label)
+    public CdcBridge getCdcBridge(@NotNull CassandraBridge bridge)
     {
-        try
-        {
-            ClassLoader loader = buildClassLoader(
-            cassandraResourceName(label),
-            bridgeResourceName(label),
-            typesResourceName(label));
-            Class<CassandraBridge> bridge = (Class<CassandraBridge>) loader.loadClass(CassandraBridge.IMPLEMENTATION_FQCN);
-            Constructor<CassandraBridge> constructor = bridge.getConstructor();
-            return constructor.newInstance();
-        }
-        catch (ClassNotFoundException | NoSuchMethodException | InstantiationException
-               | IllegalAccessException | InvocationTargetException exception)
-        {
-            throw new RuntimeException("Failed to create Cassandra bridge for label " + label, exception);
-        }
+        return CdcBridgeFactory.getCdcBridge(bridge);
     }
 
+    /**
+     * @param bridge Cassandra bridge obtained from this factory
+     * @return the CQL to Avro schema converter for the same Cassandra version, loaded in the same classloader
+     * as {@code bridge}
+     */
     @NotNull
-    String cassandraResourceName(@NotNull String label)
+    public CqlToAvroSchemaConverter getCqlToAvroSchemaConverter(@NotNull CassandraBridge bridge)
     {
-        return "/bridges/" + label + ".jar";
+        return CdcBridgeFactory.getCqlToAvroSchemaConverter(bridge);
     }
-
-    @NotNull
-    String bridgeResourceName(@NotNull String label)
-    {
-        return jarResourceName(label, "bridge");
-    }
-
-    @NotNull
-    String typesResourceName(@NotNull String label)
-    {
-        return jarResourceName(label, "types");
-    }
-
-    String jarResourceName(String... parts)
-    {
-        return "/bridges/" + String.join("-", parts) + ".jar";
-    }
-
-    public ClassLoader buildClassLoader(String... resourceNames)
-    {
-        return AccessController.doPrivileged((PrivilegedAction<ClassLoader>) () -> BaseCassandraBridgeFactory.buildClassLoader(resourceNames));
-    }
-
 }
