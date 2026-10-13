@@ -414,13 +414,14 @@ class TimeUnitBackwardsCompatibilityTest
     @Test
     void testLegacyRestoreJobTablesTtlConfiguration() throws IOException
     {
+        // 1_209_600 seconds is 14d, the minimum restore_job_tables_ttl.
         String yaml = "blob_restore:\n" +
-                      "  restore_job_tables_ttl_seconds: 76543";
+                      "  restore_job_tables_ttl_seconds: 1209600";
 
         SidecarConfigurationImpl config = SidecarConfigurationImpl.fromYamlString(yaml);
         RestoreJobConfiguration restoreJobConfig = config.restoreJobConfiguration();
         assertThat(restoreJobConfig).isNotNull();
-        assertThat(restoreJobConfig.restoreJobTablesTtl().toSeconds()).isEqualTo(76543);
+        assertThat(restoreJobConfig.restoreJobTablesTtl().toSeconds()).isEqualTo(1209600);
     }
 
     @DisplayName("Supports legacy name 'ring_topology_refresh_delay_millis' for the 'blob_restore' configuration")
