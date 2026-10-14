@@ -135,7 +135,7 @@ public abstract class RangeManager implements Handler<Message<Object>>
     {
         this.vertx = vertx;
         this.tokenRingProvider = tokenRingProvider;
-        initializeRanges();
+        // Ranges are set on CQL ready, Cassandra is not reachable yet at this point
         try
         {
             vertx.eventBus().registerDefaultCodec(RangeChangeEvent.class, RangeChangeEventCodec.INSTANCE);
@@ -405,7 +405,8 @@ public abstract class RangeManager implements Handler<Message<Object>>
         }
         catch (RuntimeException runtimeException)
         {
-            LOGGER.warn("localDC is unavailable", runtimeException);
+            LOGGER.warn("localDC is unavailable: {}", runtimeException.getMessage());
+            LOGGER.debug("localDC is unavailable", runtimeException);
             // localDc throws when no local instances are found
             return null;
         }
