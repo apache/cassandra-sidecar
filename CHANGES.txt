@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * RangeManager "localDC is unavailable" very early upon Sidecar startup (CASSSIDECAR-418)
  * CDC fails to deserialize nested UDT columns (CASSSIDECAR-507)
  * CDC log_only mode should not require Kafka producer configuration (CASSSIDECAR-492)
  * Report unknown node status as "Unknown" instead of "?" in ring and token range replica responses (CASSSIDECAR-506)
