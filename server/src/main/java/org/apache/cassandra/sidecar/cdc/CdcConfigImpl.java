@@ -94,10 +94,8 @@ public class CdcConfigImpl implements CdcConfig
     @Override
     public boolean isConfigReady()
     {
-        kafkaConfigs();
-        cdcConfigs();
         return cdcConfigAccessor.isAvailable()
-                && !kafkaConfigMappings.isEmpty()
+                && (logOnly() || !kafkaConfigMappings.isEmpty())
                 && !cdcConfigMappings.isEmpty();
     }
 

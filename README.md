@@ -209,6 +209,9 @@ curl --request PUT \
   - `TABLE`: Format as `{topic}-{table}`
   - `MAP`: Use custom topic mapping (advanced)
 - `topic`: Base Kafka topic name for CDC events.
+- `log_only`: When `true`, CDC mutations are logged instead of published to Kafka, and no Kafka
+  producer configuration is required. Mutations processed in this mode are not published to Kafka
+  later, even after `log_only` is turned off.
 
 #### 5. Configure Kafka Producer
 
