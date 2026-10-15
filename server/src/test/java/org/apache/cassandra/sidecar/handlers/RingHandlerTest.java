@@ -20,6 +20,8 @@ package org.apache.cassandra.sidecar.handlers;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
@@ -50,10 +52,15 @@ import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.InstancesMetadata;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
+import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaInfo;
+import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse.ReplicaMetadata;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.server.StorageOperations;
 import org.apache.cassandra.sidecar.common.server.exceptions.JmxAuthenticationException;
+import org.apache.cassandra.sidecar.exceptions.NoSuchCassandraInstanceException;
 import org.apache.cassandra.sidecar.modules.SidecarModules;
 import org.apache.cassandra.sidecar.server.Server;
 import org.mockito.stubbing.Answer;
@@ -61,6 +68,7 @@ import org.mockito.stubbing.Answer;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -113,8 +121,9 @@ class RingHandlerTest
               .send(context.succeedingThenComplete());
     }
 
-    @Test
-    void testGetRing(VertxTestContext context)
+    @ParameterizedTest
+    @ValueSource(strings = { "/api/v1/cassandra/ring", "/api/v1/cassandra/ring/keyspaces/test_keyspace" })
+    void testGetRing(String testRoute, VertxTestContext context)
     {
         int ringSize = 10;
         RingHandlerTestModule.ringSupplier = () -> {
@@ -133,7 +142,6 @@ class RingHandlerTest
             return response;
         };
         WebClient client = WebClient.create(vertx);
-        String testRoute = "/api/v1/cassandra/ring";
         client.get(server.actualPort(), "127.0.0.1", testRoute)
               .expect(ResponsePredicate.SC_OK)
               .send(context.succeeding(response -> {
@@ -152,8 +160,50 @@ class RingHandlerTest
                       assertThat(entry.state()).isEqualTo("Normal");
                       assertThat(entry.status()).isEqualTo("Up");
                       assertThat(entry.token()).isEqualTo(String.valueOf(i));
+                      if (i == 1)
+                      {
+                          assertThat(entry.sidecarInstanceId()).isEqualTo(100);
+                      }
+                      else
+                      {
+                          assertThat(entry.sidecarInstanceId()).isNull();
+                      }
                   }
 
+                  context.completeNow();
+              }));
+    }
+
+    @Test
+    void testTokenRangeReplicasPreserveTopologyAndAddLocalInstanceIds(VertxTestContext context)
+    {
+        Map<String, ReplicaMetadata> metadata = new LinkedHashMap<>();
+        metadata.put("127.0.0.1:7000", new ReplicaMetadata("Normal", "Up", "host1", "127.0.0.1", 7000, "dc1"));
+        metadata.put("127.0.0.2:7000", new ReplicaMetadata("Joining", "Down", "host2", "127.0.0.2", 7000, "dc2"));
+        ReplicaInfo writeRange = new ReplicaInfo("0", "100",
+                                                Collections.singletonMap("dc1", Collections.singletonList("127.0.0.1:7000")));
+        ReplicaInfo readRange = new ReplicaInfo("0", "100",
+                                               Collections.singletonMap("dc2", Collections.singletonList("127.0.0.2:7000")));
+        TokenRangeReplicasResponse topology = new TokenRangeReplicasResponse(Collections.singletonList(writeRange),
+                                                                            Collections.singletonList(readRange), metadata);
+        RingHandlerTestModule.tokenRangeReplicasSupplier = () -> topology;
+        JsonObject original = JsonObject.mapFrom(topology);
+
+        WebClient client = WebClient.create(vertx);
+        client.get(server.actualPort(), "127.0.0.1", "/api/v1/keyspaces/test_keyspace/token-range-replicas")
+              .expect(ResponsePredicate.SC_OK)
+              .send(context.succeeding(response -> {
+                  JsonObject body = response.bodyAsJsonObject();
+                  assertThat(body.getJsonArray("writeReplicas")).isEqualTo(original.getJsonArray("writeReplicas"));
+                  assertThat(body.getJsonArray("readReplicas")).isEqualTo(original.getJsonArray("readReplicas"));
+                  JsonObject replicas = body.getJsonObject("replicaMetadata");
+                  assertThat(replicas.fieldNames()).containsExactlyInAnyOrderElementsOf(metadata.keySet());
+                  for (String replica : metadata.keySet())
+                  {
+                      JsonObject expected = JsonObject.mapFrom(metadata.get(replica));
+                      expected.put("sidecarInstanceId", replica.equals("127.0.0.1:7000") ? 100 : null);
+                      assertThat(replicas.getJsonObject(replica)).isEqualTo(expected);
+                  }
                   context.completeNow();
               }));
     }
@@ -202,6 +252,7 @@ class RingHandlerTest
     static class RingHandlerTestModule extends AbstractModule
     {
         static Supplier<RingResponse> ringSupplier;
+        static Supplier<TokenRangeReplicasResponse> tokenRangeReplicasSupplier;
 
         @Provides
         @Singleton
@@ -217,13 +268,23 @@ class RingHandlerTest
             CassandraAdapterDelegate delegate = mock(CassandraAdapterDelegate.class);
             StorageOperations ops = mock(StorageOperations.class);
             when(ops.ring(any())).thenAnswer((Answer<RingResponse>) invocation -> ringSupplier.get());
+            when(ops.tokenRangeReplicas(any(), any()))
+            .thenAnswer((Answer<TokenRangeReplicasResponse>) invocation -> tokenRangeReplicasSupplier.get());
             when(delegate.storageOperations()).thenReturn(ops);
+            when(delegate.nodeSettings()).thenReturn(new NodeSettings());
             when(instanceMetadata.delegate()).thenReturn(delegate);
 
             InstancesMetadata mockInstancesMetadata = mock(InstancesMetadata.class);
             when(mockInstancesMetadata.instances()).thenReturn(Collections.singletonList(instanceMetadata));
             when(mockInstancesMetadata.instanceFromId(instanceId)).thenReturn(instanceMetadata);
-            when(mockInstancesMetadata.instanceFromHost(host)).thenReturn(instanceMetadata);
+            when(mockInstancesMetadata.instanceFromHost(anyString())).thenAnswer(invocation -> {
+                String requestedHost = invocation.getArgument(0);
+                if (host.equals(requestedHost))
+                {
+                    return instanceMetadata;
+                }
+                throw new NoSuchCassandraInstanceException("Instance with host address '" + requestedHost + "' not found");
+            });
 
             return mockInstancesMetadata;
         }
