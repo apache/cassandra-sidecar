@@ -27,9 +27,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.bridge.CassandraBridge;
-import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CdcBridge;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
@@ -40,13 +39,14 @@ import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 import org.apache.cassandra.spark.utils.TableIdentifier;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
 /**
@@ -56,8 +56,6 @@ public class CdcSchemaSupplierTest
 {
     @Mock
     private InstanceMetadataFetcher instanceMetadataFetcher;
-    @Mock
-    private CassandraBridgeFactory cassandraBridgeFactory;
     @Mock
     private CdcDatabaseAccessor cdcDatabaseAccessor;
     @Mock
@@ -99,7 +97,6 @@ public class CdcSchemaSupplierTest
 
         cdcSchemaSupplier = new CdcSchemaSupplier(
             instanceMetadataFetcher,
-            cassandraBridgeFactory,
             cdcDatabaseAccessor,
             sidecarConfiguration
         );
@@ -114,8 +111,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(SAMPLE_SCHEMA)  // First call returns schema
             .thenReturn(nodeSettings);   // Second call returns node settings
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
@@ -138,8 +133,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(SAMPLE_SCHEMA)
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
@@ -159,8 +152,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(SCHEMA_NO_CDC)  // Schema with no CDC tables
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
         // setUp() already configures batchStatementsEnabled=true — with no CDC-enabled table in
@@ -182,8 +173,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(SCHEMA_NO_CDC)  // Keyspace has zero CDC-enabled tables
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
@@ -206,8 +195,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(mixedSchema)
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         // A distinct UUID per table — a single fixed UUID for all tables collides in the
         // bridge's schema-building code once more than one table is built in the same call.
@@ -235,8 +222,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(mixedSchema)
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenAnswer(invocation -> UUID.randomUUID());
 
@@ -262,8 +247,6 @@ public class CdcSchemaSupplierTest
             .thenReturn(mixedSchema)
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenAnswer(invocation -> UUID.randomUUID());
 
@@ -276,7 +259,7 @@ public class CdcSchemaSupplierTest
     }
 
     @Test
-    void testGetCdcEnabledTablesCallsCassandraBridgeFactory()
+    void testGetCdcEnabledTablesCallsCdcBridgeFactory()
     {
         String releaseVersion = "4.1.0";
         NodeSettings nodeSettings = mockNodeSettings(releaseVersion, "Murmur3Partitioner");
@@ -285,14 +268,15 @@ public class CdcSchemaSupplierTest
             .thenReturn(SAMPLE_SCHEMA)
             .thenReturn(nodeSettings);
 
-        CassandraBridge realBridge = new CassandraBridgeFactory().get(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(realBridge);
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
-        cdcSchemaSupplier.getTables();
+        try (MockedStatic<CdcBridgeFactory> cdcBridgeFactory = mockStatic(CdcBridgeFactory.class, CALLS_REAL_METHODS))
+        {
+            cdcSchemaSupplier.getTables();
 
-        verify(cassandraBridgeFactory).get(releaseVersion);
+            cdcBridgeFactory.verify(() -> CdcBridgeFactory.get(releaseVersion));
+        }
     }
 
     private NodeSettings mockNodeSettings(String releaseVersion, String partitioner)

@@ -17,6 +17,8 @@
  */
 package org.apache.cassandra.sidecar.cdc;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
@@ -24,15 +26,30 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.inject.Injector;
+import org.apache.avro.generic.GenericData;
+import org.apache.avro.generic.GenericDatumReader;
+import org.apache.avro.generic.GenericDatumWriter;
+import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.io.BinaryEncoder;
+import org.apache.avro.io.DecoderFactory;
+import org.apache.avro.io.EncoderFactory;
+import org.apache.cassandra.bridge.CassandraVersion;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
+import org.apache.cassandra.cdc.TypeCache;
+import org.apache.cassandra.cdc.avro.AvroConstants;
+import org.apache.cassandra.cdc.avro.AvroGenericRecordTransformer;
 import org.apache.cassandra.cdc.msg.CdcEvent;
 import org.apache.cassandra.distributed.api.ConsistencyLevel;
 import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterCdcSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestCdcEventConsumer;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.TableIdentifier;
 
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
@@ -62,6 +79,7 @@ public class CdcIntegrationTest extends SharedClusterCdcSidecarIntegrationTestBa
     private static final QualifiedName CDC_TABLE = new QualifiedName("cdc_batch_test_ks", "cdc_table");
     private static final QualifiedName NON_CDC_TABLE = new QualifiedName("cdc_batch_test_ks", "non_cdc_table");
     private static final QualifiedName MISMATCHED_PK_TABLE = new QualifiedName("cdc_batch_test_ks", "mismatched_pk_table");
+    private static final QualifiedName UDT_TABLE = new QualifiedName("cdc_udt_test_ks", "udt_table");
 
     @Override
     protected void initializeSchemaForTest()
@@ -82,6 +100,13 @@ public class CdcIntegrationTest extends SharedClusterCdcSidecarIntegrationTestBa
         createTestTable(MISMATCHED_PK_TABLE, "CREATE TABLE IF NOT EXISTS %s "
                                              + "(id text PRIMARY KEY, value int) "
                                              + "WITH cdc = false");
+
+        createTestKeyspace(UDT_TABLE, DC1_RF1);
+        cluster.schemaChangeIgnoringStoppedInstances("CREATE TYPE IF NOT EXISTS " + UDT_TABLE.keyspace()
+                                                     + ".task_result (status text, message text)");
+        createTestTable(UDT_TABLE, "CREATE TABLE IF NOT EXISTS %s "
+                                   + "(id int PRIMARY KEY, results list<frozen<task_result>>) "
+                                   + "WITH cdc = true");
     }
 
     @Override
@@ -169,6 +194,61 @@ public class CdcIntegrationTest extends SharedClusterCdcSidecarIntegrationTestBa
         .as("Non-CDC table's mutation must never be published, even though it's registered in "
           + "Schema.instance because it shares CDC_TABLE's partition-key structure")
         .noneMatch(event -> event.table.equals(NON_CDC_TABLE.table()));
+    }
+
+    @Test
+    void testUdtColumnsArePublishedAsAvroRecords() throws IOException
+    {
+        String query = String.format("INSERT INTO %s (id, results) VALUES (1, " +
+                                     "[{status: 'SUCCESS', message: 'completed'}, {status: 'FAILED', message: 'timed out'}])",
+                                     UDT_TABLE);
+        cluster.getFirstRunningInstance()
+               .coordinator()
+               .execute(query, ConsistencyLevel.ONE);
+
+        // Seal the active commit log segment so CDC can find the mutation in cdc_raw
+        cluster.getFirstRunningInstance().flush(UDT_TABLE.keyspace());
+
+        TestCdcEventConsumer consumer = getTestEventConsumer();
+        AtomicReference<CdcEvent> udtEvent = new AtomicReference<>();
+        waitUntil(() -> {
+            consumer.getEvents().stream()
+                    .filter(event -> event.table.equals(UDT_TABLE.table()))
+                    .findFirst()
+                    .ifPresent(udtEvent::set);
+            return udtEvent.get() != null;
+        }, 120, 1000);
+        CdcEvent event = udtEvent.get();
+
+        // Serialize the event to Avro as the Kafka publisher does, with Sidecar's schema store and type lookup
+        Injector injector = serverWrapper.injector;
+        String releaseVersion = injector.getInstance(InstanceMetadataFetcher.class)
+                                        .callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings())
+                                        .releaseVersion();
+        CassandraVersion version = CdcBridgeFactory.get(releaseVersion).getVersion();
+        AvroGenericRecordTransformer transformer =
+        new AvroGenericRecordTransformer(injector.getInstance(CachingSchemaStore.class),
+                                         key -> TypeCache.get(version).getType(key.keyspace, key.type),
+                                         null);
+        GenericData.Record record = transformer.transform(event);
+        GenericRecord payload = (GenericRecord) encodeAndDecode(record).get(AvroConstants.PAYLOAD_KEY);
+
+        List<?> results = (List<?>) payload.get("results");
+        assertThat(results).hasSize(2);
+        assertThat(((GenericRecord) results.get(0)).get("status")).hasToString("SUCCESS");
+        assertThat(((GenericRecord) results.get(0)).get("message")).hasToString("completed");
+        assertThat(((GenericRecord) results.get(1)).get("status")).hasToString("FAILED");
+        assertThat(((GenericRecord) results.get(1)).get("message")).hasToString("timed out");
+    }
+
+    private static GenericRecord encodeAndDecode(GenericData.Record record) throws IOException
+    {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        BinaryEncoder encoder = EncoderFactory.get().binaryEncoder(out, null);
+        new GenericDatumWriter<GenericRecord>(record.getSchema()).write(record, encoder);
+        encoder.flush();
+        return new GenericDatumReader<GenericRecord>(record.getSchema())
+               .read(null, DecoderFactory.get().binaryDecoder(out.toByteArray(), null));
     }
 
     @Test

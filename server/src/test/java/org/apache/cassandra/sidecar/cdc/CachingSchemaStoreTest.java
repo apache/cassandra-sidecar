@@ -44,7 +44,6 @@ import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
 import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
 import org.apache.cassandra.cdc.schemastore.TableSchemaPublisher;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.db.TableHistoryDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
@@ -105,7 +104,7 @@ public class CachingSchemaStoreTest
         mockSidecarSchema = mock(SidecarSchema.class);
         when(mockSidecarSchema.isInitialized()).thenReturn(true);
 
-        cassandraBridge = new CassandraBridgeFactory().get(version);
+        cassandraBridge = CdcBridgeFactory.get(version);
         cqlToAvroSchemaConverter = CdcBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge);
 
         mockCassandraClusterSchemaMonitor = mock(CassandraClusterSchemaMonitor.class);
