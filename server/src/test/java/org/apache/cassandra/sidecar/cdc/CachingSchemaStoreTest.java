@@ -37,13 +37,13 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CdcBridge;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.api.TableIdLookup;
 import org.apache.cassandra.cdc.avro.AvroSchemas;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
 import org.apache.cassandra.cdc.schemastore.SchemaStorePublisherFactory;
 import org.apache.cassandra.cdc.schemastore.TableSchemaPublisher;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.db.TableHistoryDatabaseAccessor;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
@@ -86,7 +86,6 @@ public class CachingSchemaStoreTest
                                                                                       Map.of("DC1", 3));
     private static final Partitioner PARTITIONER = Partitioner.Murmur3Partitioner;
 
-    final CassandraBridgeFactory cassandraBridgeFactory = new CassandraBridgeFactory();
     CassandraBridge cassandraBridge;
 
     final Vertx vertx = Vertx.vertx();
@@ -105,8 +104,8 @@ public class CachingSchemaStoreTest
         mockSidecarSchema = mock(SidecarSchema.class);
         when(mockSidecarSchema.isInitialized()).thenReturn(true);
 
-        cassandraBridge = cassandraBridgeFactory.get(version);
-        cqlToAvroSchemaConverter = cassandraBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge);
+        cassandraBridge = CdcBridgeFactory.get(version);
+        cqlToAvroSchemaConverter = CdcBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge);
 
         mockCassandraClusterSchemaMonitor = mock(CassandraClusterSchemaMonitor.class);
 
@@ -333,7 +332,7 @@ public class CachingSchemaStoreTest
     public Set<CqlTable> cqlTables(String createStatement)
     {
         Set<CqlTable> tables = Set.of(cassandraBridge.buildSchema(createStatement, TEST_KEYSPACE, REPLICATION_FACTOR, PARTITIONER));
-        CdcBridge cdcBridge = cassandraBridgeFactory.getCdcBridge(cassandraBridge);
+        CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(cassandraBridge);
         cdcBridge.updateCdcSchema(tables, PARTITIONER, TableIdLookup.STUB);
         return Set.of(cassandraBridge.buildSchema(createStatement, TEST_KEYSPACE, REPLICATION_FACTOR, PARTITIONER));
     }

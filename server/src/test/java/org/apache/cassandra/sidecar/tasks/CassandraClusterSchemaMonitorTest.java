@@ -26,13 +26,14 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Promise;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CdcBridge;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.CdcConfiguration;
@@ -79,7 +80,7 @@ class CassandraClusterSchemaMonitorTest
     private NodeSettings mockNodeSettings;
     private CassandraBridge mockCassandraBridge;
     private CdcBridge mockCdcBridge;
-    private CassandraBridgeFactory mockCassandraBridgeFactory;
+    private MockedStatic<CdcBridgeFactory> mockCdcBridgeFactory;
 
     private static final String INITIAL_SCHEMA = "CREATE TABLE test.cdc_table (\n" +
                                                  "    id uuid PRIMARY KEY,\n" +
@@ -109,7 +110,7 @@ class CassandraClusterSchemaMonitorTest
         mockNodeSettings = mock(NodeSettings.class);
         mockCassandraBridge = mock(CassandraBridge.class);
         mockCdcBridge = mock(CdcBridge.class);
-        mockCassandraBridgeFactory = mock(CassandraBridgeFactory.class);
+        mockCdcBridgeFactory = Mockito.mockStatic(CdcBridgeFactory.class);
 
         // Setup configuration chain
         when(mockSidecarConfiguration.serviceConfiguration()).thenReturn(mockServiceConfiguration);
@@ -133,16 +134,21 @@ class CassandraClusterSchemaMonitorTest
         when(mockDriverUnsupportedSchemaCache.getFullSchema()).thenReturn("");
         when(mockDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(mockDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
-        when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
-        when(mockCassandraBridgeFactory.getCdcBridge(any(CassandraBridge.class))).thenReturn(mockCdcBridge);
+        mockCdcBridgeFactory.when(() -> CdcBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
+        mockCdcBridgeFactory.when(() -> CdcBridgeFactory.getCdcBridge(any(CassandraBridge.class))).thenReturn(mockCdcBridge);
 
         clusterSchema = new CassandraClusterSchemaMonitor(
         mockInstanceFetcher,
         mockDatabaseAccessor,
         mockDriverUnsupportedSchemaCache,
-        mockSidecarConfiguration,
-        mockCassandraBridgeFactory
+        mockSidecarConfiguration
         );
+    }
+
+    @AfterEach
+    void tearDown()
+    {
+        mockCdcBridgeFactory.close();
     }
 
     @Test
@@ -201,7 +207,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls for initial schema
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts1 = Collections.singletonMap(
@@ -254,7 +259,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Initial schema: a CDC table and a non-CDC table sharing the same partition key
             // structure — the non-CDC table is at risk and must be registered.
@@ -306,7 +310,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
             TableIdentifier.of("test", "cdc_table"), new CdcUtil.TableSchema(INITIAL_SCHEMA, true, CdcUtil.PartitionKeySignature.indeterminate()));
@@ -334,7 +337,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Same setup as testRefreshUnregistersTableNoLongerAtRisk: non_cdc_table starts at
             // risk (registered), then a schema change makes it no longer at risk.
@@ -397,7 +399,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
@@ -426,7 +427,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
@@ -452,7 +452,6 @@ class CassandraClusterSchemaMonitorTest
     @Test
     void testRefreshHandlesIllegalStateExceptionGracefully()
     {
-        when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
         when(mockDatabaseAccessor.fullSchema()).thenThrow(new IllegalStateException("Database not ready"));
 
@@ -474,7 +473,6 @@ class CassandraClusterSchemaMonitorTest
     @Test
     void testRefreshHandlesGenericExceptionGracefully()
     {
-        when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
         when(mockDatabaseAccessor.fullSchema()).thenThrow(new RuntimeException("Unexpected error"));
 
@@ -499,7 +497,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
@@ -522,7 +519,6 @@ class CassandraClusterSchemaMonitorTest
     @Test
     void testExecuteFailsPromiseOnException()
     {
-        when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
         @SuppressWarnings("unchecked")
         Promise<Void> promise = mock(Promise.class);
@@ -545,7 +541,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
@@ -571,7 +566,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
@@ -603,7 +597,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
@@ -630,7 +623,6 @@ class CassandraClusterSchemaMonitorTest
     @Test
     void testSchemaChangeListenersNotCalledOnException()
     {
-        when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
         AtomicBoolean listenerCalled = new AtomicBoolean(false);
         clusterSchema.addSchemaChangeListener(() -> listenerCalled.set(true));
@@ -657,7 +649,6 @@ class CassandraClusterSchemaMonitorTest
         try (MockedStatic<CdcUtil> cdcUtil = Mockito.mockStatic(CdcUtil.class);
              MockedStatic<CqlUtils> cqlUtils = Mockito.mockStatic(CqlUtils.class))
         {
-            when(mockCassandraBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
 
             // Mock utility class calls
             Map<TableIdentifier, CdcUtil.TableSchema> mockCreateStmts = Collections.singletonMap(
