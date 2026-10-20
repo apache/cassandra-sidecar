@@ -47,7 +47,6 @@ class DurableOperationalJobTrackerIntegrationTest extends IntegrationTestBase
         waitForSchemaReady(10, TimeUnit.SECONDS);
 
         StorageProvider storageProvider = injector.getInstance(StorageProvider.class);
-        storageProvider.initialize();
 
         ExecutorPools executorPools = injector.getInstance(ExecutorPools.class);
         TaskExecutorPool executorPool = executorPools.internal();
