@@ -39,6 +39,7 @@ import org.apache.cassandra.sidecar.concurrent.TaskExecutorPool;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.job.storage.OperationalJobRecord;
 import org.apache.cassandra.sidecar.job.storage.StorageProvider;
+import org.apache.cassandra.sidecar.job.storage.StorageProviderException;
 import org.apache.cassandra.sidecar.utils.InvocationTrackingFunction;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -188,26 +189,40 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
     public List<OperationalJobInfo> inflightJobs()
     {
         Map<UUID, OperationalJobInfo> merged = new LinkedHashMap<>(liveJobs);
-
-        // Coordinated jobs are removed from liveJobs almost immediately after handoff but might be still 
-        // running. Therefore, we fetch those active operations from storage 
-        for (UUID activeJobId : storageProvider.getActiveOperations().values())
+        if (storageProvider.isAvailable())
         {
-            if (merged.containsKey(activeJobId))
-            {
-                continue;
-            }
-            OperationalJobRecord record = storageProvider.findJob(activeJobId);
-            if (record != null)
-            {
-                merged.put(activeJobId, enrichWithNodeStatuses(record));
-            }
+            mergeActiveOperationsFromStorage(merged);
         }
 
         return merged.values()
                      .stream()
                      .filter(job -> !job.status().isCompleted())
                      .collect(Collectors.toList());
+    }
+
+    private void mergeActiveOperationsFromStorage(Map<UUID, OperationalJobInfo> merged)
+    {
+        try
+        {
+            // Coordinated jobs are removed from liveJobs almost immediately after handoff but might be still
+            // running. Therefore, we fetch those active operations from storage
+            for (UUID activeJobId : storageProvider.getActiveOperations().values())
+            {
+                if (merged.containsKey(activeJobId))
+                {
+                    continue;
+                }
+                OperationalJobRecord record = storageProvider.findJob(activeJobId);
+                if (record != null)
+                {
+                    merged.put(activeJobId, enrichWithNodeStatuses(record));
+                }
+            }
+        }
+        catch (StorageProviderException e)
+        {
+            LOGGER.warn("Failed to read active operations from storage. Returning in-memory jobs only", e);
+        }
     }
 
     /**
