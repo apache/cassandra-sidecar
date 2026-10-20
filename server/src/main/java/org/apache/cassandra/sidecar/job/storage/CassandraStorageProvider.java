@@ -234,7 +234,7 @@ public class CassandraStorageProvider implements StorageProvider
         {
             return action.get();
         }
-        catch (DriverException e)
+        catch (DriverException | CassandraUnavailableException e)
         {
             throw new StorageProviderException("Failed to execute " + operation, e);
         }

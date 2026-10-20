@@ -79,6 +79,7 @@ class DurableOperationalJobTrackerTest
     void setUp()
     {
         storageProvider = mock(StorageProvider.class);
+        when(storageProvider.isAvailable()).thenReturn(true);
         vertx = Vertx.vertx();
         executorPools = new ExecutorPools(vertx, new ServiceConfigurationImpl());
         executorPool = executorPools.internal();
@@ -700,4 +701,42 @@ class DurableOperationalJobTrackerTest
         verify(storageProvider).findJob(coordinatedJobId);
     }
 
+    @Test
+    void testInflightJobsReturnsLiveJobsWhenStorageUnavailable()
+    {
+        when(storageProvider.isAvailable()).thenReturn(false);
+        OperationalJob liveJob = createOperationalJob(CREATED);
+        tracker.computeIfAbsent(liveJob.jobId(), id -> liveJob);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).containsExactly(liveJob);
+        verify(storageProvider, never()).getActiveOperations();
+    }
+
+    @Test
+    void testInflightJobsReturnsLiveJobsWhenGetActiveOperationsFails()
+    {
+        when(storageProvider.getActiveOperations()).thenThrow(new StorageProviderException("read failed"));
+        OperationalJob liveJob = createOperationalJob(CREATED);
+        tracker.computeIfAbsent(liveJob.jobId(), id -> liveJob);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).containsExactly(liveJob);
+    }
+
+    @Test
+    void testInflightJobsReturnsLiveJobsWhenFindJobFails()
+    {
+        UUID coordinatedJobId = UUIDs.timeBased();
+        when(storageProvider.getActiveOperations()).thenReturn(Map.of(OperationType.DRAIN, coordinatedJobId));
+        when(storageProvider.findJob(coordinatedJobId)).thenThrow(new StorageProviderException("read failed"));
+        OperationalJob liveJob = createOperationalJob(CREATED);
+        tracker.computeIfAbsent(liveJob.jobId(), id -> liveJob);
+
+        List<OperationalJobInfo> inflight = tracker.inflightJobs();
+
+        assertThat(inflight).containsExactly(liveJob);
+    }
 }

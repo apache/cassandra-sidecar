@@ -33,6 +33,7 @@ import org.apache.cassandra.sidecar.db.ClusterOpsNodeStateDatabaseAccessor;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
+import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL;
 import static org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException.Service.CQL_AND_JMX;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -98,5 +99,19 @@ class CassandraStorageProviderTest
         assertThatThrownBy(() -> provider.trySetActiveOperation(OperationType.DRAIN, OPERATION_ID))
         .isInstanceOf(StorageProviderException.class)
         .hasMessageContaining("Failed to resolve local datacenter");
+    }
+
+    @Test
+    void testWrapsCassandraUnavailableFromAccessor()
+    {
+        when(instanceMetadataFetcher.<NodeSettings>callOnFirstAvailableInstance(any()))
+        .thenReturn(NodeSettings.builder().datacenter("dc-from-node").build());
+        when(activeOpsAccessor.getActiveOperations(CLUSTER_NAME, "dc-from-node"))
+        .thenThrow(new CassandraUnavailableException(CQL, "session unavailable"));
+
+        assertThatThrownBy(() -> provider.getActiveOperations())
+        .isInstanceOf(StorageProviderException.class)
+        .hasMessageContaining("Failed to execute getActiveOperations")
+        .hasCauseInstanceOf(CassandraUnavailableException.class);
     }
 }
