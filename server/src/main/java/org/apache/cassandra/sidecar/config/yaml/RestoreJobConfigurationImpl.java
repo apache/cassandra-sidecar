@@ -28,11 +28,12 @@ import org.apache.cassandra.sidecar.common.DataObjectBuilder;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
+import org.apache.cassandra.sidecar.config.Validatable;
 
 /**
  * Configuration needed restore jobs restoring data from blob
  */
-public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
+public class RestoreJobConfigurationImpl implements RestoreJobConfiguration, Validatable
 {
     private static final Logger LOGGER = LoggerFactory.getLogger(RestoreJobConfigurationImpl.class);
     private static final SecondBoundConfiguration MIN_RESTORE_JOB_TABLES_TTL =
@@ -96,7 +97,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         validate();
     }
 
-    private void validate()
+    @Override
+    public void validate()
     {
         if (restoreJobTablesTtl.compareTo(MIN_RESTORE_JOB_TABLES_TTL) < 0)
         {
