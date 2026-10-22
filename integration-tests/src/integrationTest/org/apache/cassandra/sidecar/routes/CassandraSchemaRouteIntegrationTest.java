@@ -122,7 +122,7 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
                                       .bodyAsJson(SchemaResponse.class);
             assertThat(response.schema())
             .describedAs("Schema of %s must be the schema rendered by Cassandra", keyspace)
-            .isEqualTo(describeKeyspace(keyspace));
+            .isEqualTo(convertToUpperCase(describeKeyspace(keyspace)));
         }
     }
 
@@ -134,9 +134,9 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
                                                              .send()
                                                              .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
-        assertThat(response.schema()).contains(describeKeyspace("testkeyspace"));
-        assertThat(response.schema()).contains(describeKeyspace("\"Cycling\""));
-        assertThat(response.schema()).contains(describeKeyspace("\"keyspace\""));
+        assertThat(response.schema()).contains(convertToUpperCase(describeKeyspace("testkeyspace")));
+        assertThat(response.schema()).contains(convertToUpperCase(describeKeyspace("\"Cycling\"")));
+        assertThat(response.schema()).contains(convertToUpperCase(describeKeyspace("\"keyspace\"")));
         assertThat(response.schema()).contains("CREATE KEYSPACE system_traces");
     }
 
@@ -153,5 +153,10 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
             assertThat(statements).isNotEmpty();
             return String.join("\n\n", statements);
         }
+    }
+
+    String convertToUpperCase(String keyspaceSchema)
+    {
+        return keyspaceSchema.replaceFirst("WITH replication", "WITH REPLICATION");
     }
 }

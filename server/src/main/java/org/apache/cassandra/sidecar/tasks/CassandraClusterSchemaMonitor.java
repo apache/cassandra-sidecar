@@ -113,8 +113,7 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
         try
         {
             LOGGER.debug("Checking for schema changes...");
-            String fullSchemaText = schemaCache.concatSchemas(databaseAccessor.fullSchema(),
-                                                              schemaCache.getFullSchema());
+            String fullSchemaText = schemaCache.getFullSchema();
             if (!fullSchemaText.equals(currSchemaText.get()))
             {
                 LOGGER.info("Schema change detected, refreshing CDC tables");
