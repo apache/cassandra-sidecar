@@ -35,7 +35,7 @@ import org.slf4j.LoggerFactory;
 import io.vertx.core.Promise;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CdcBridge;
-import org.apache.cassandra.bridge.CdcBridgeFactory;
+import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cdc.CdcSchemaUtils;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
@@ -82,17 +82,20 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     private final CopyOnWriteArrayList<Runnable> schemaChangeListeners = new CopyOnWriteArrayList<>();
     private final SidecarConfiguration sidecarConfiguration;
     private final InstanceMetadataFetcher instanceFetcher;
+    private final CassandraBridgeFactory cassandraBridgeFactory;
 
     public CassandraClusterSchemaMonitor(InstanceMetadataFetcher instanceFetcher,
                                          CdcDatabaseAccessor databaseAccessor,
                                          DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
-                                         SidecarConfiguration sidecarConfiguration)
+                                         SidecarConfiguration sidecarConfiguration,
+                                         CassandraBridgeFactory cassandraBridgeFactory)
     {
 
         this.instanceFetcher = instanceFetcher;
         this.databaseAccessor = databaseAccessor;
         this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
         this.sidecarConfiguration = sidecarConfiguration;
+        this.cassandraBridgeFactory = cassandraBridgeFactory;
     }
 
     public void addSchemaChangeListener(Runnable listener)
@@ -103,8 +106,8 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     public void refresh()
     {
         NodeSettings nodeSettings = instanceFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings());
-        CassandraBridge cassandraBridge = CdcBridgeFactory.get(nodeSettings.releaseVersion());
-        CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(cassandraBridge);
+        CassandraBridge cassandraBridge = cassandraBridgeFactory.get(nodeSettings.releaseVersion());
+        CdcBridge cdcBridge = cassandraBridgeFactory.getCdcBridge(cassandraBridge);
 
         try
         {

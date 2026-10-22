@@ -19,16 +19,20 @@
 package org.apache.cassandra.sidecar.cdc;
 
 import java.time.Duration;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import org.apache.cassandra.bridge.CassandraVersion;
+import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -46,14 +50,47 @@ import static org.mockito.Mockito.when;
 class SidecarCdcOptionsTest
 {
     private CdcConfig conf;
+    private InstanceMetadataFetcher instanceMetadataFetcher;
     private SidecarCdcOptions options;
 
     @BeforeEach
     void setUp()
     {
         conf = mock(CdcConfig.class);
-        InstanceMetadataFetcher instanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
-        options = new SidecarCdcOptions(instanceMetadataFetcher, conf);
+        instanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
+        options = new SidecarCdcOptions(instanceMetadataFetcher, conf, new CassandraBridgeFactory());
+    }
+
+    @Test
+    void versionResolvesTheReleaseVersionOfTheInstance()
+    {
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn("5.0.4");
+
+        assertThat(options.version()).isEqualTo(CassandraVersion.FIVEZERO);
+    }
+
+    @Test
+    void versionFallsBackToFourZeroForAnUnknownReleaseVersion()
+    {
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn("9.9.9");
+
+        assertThat(options.version()).isEqualTo(CassandraVersion.FOURZERO);
+    }
+
+    @Test
+    void versionIsResolvedByTheCassandraBridgeFactory()
+    {
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn("5.0.4");
+        CassandraBridgeFactory bridgeFactory = new CassandraBridgeFactory()
+        {
+            @Override
+            public Optional<CassandraVersion> cassandraVersion(String releaseVersion)
+            {
+                return Optional.of(CassandraVersion.SIXZERO);
+            }
+        };
+
+        assertThat(new SidecarCdcOptions(instanceMetadataFetcher, conf, bridgeFactory).version()).isEqualTo(CassandraVersion.SIXZERO);
     }
 
     @Test

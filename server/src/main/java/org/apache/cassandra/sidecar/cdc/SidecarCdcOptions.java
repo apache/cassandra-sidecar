@@ -23,6 +23,7 @@ import java.util.Map;
 
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
+import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.ReplicationFactor;
 
@@ -38,11 +39,15 @@ public class SidecarCdcOptions implements CdcOptions
 {
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final CdcConfig conf;
+    private final CassandraBridgeFactory cassandraBridgeFactory;
 
-    public SidecarCdcOptions(InstanceMetadataFetcher instanceMetadataFetcher, CdcConfig conf)
+    public SidecarCdcOptions(InstanceMetadataFetcher instanceMetadataFetcher,
+                             CdcConfig conf,
+                             CassandraBridgeFactory cassandraBridgeFactory)
     {
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.conf = conf;
+        this.cassandraBridgeFactory = cassandraBridgeFactory;
     }
 
 
@@ -64,7 +69,7 @@ public class SidecarCdcOptions implements CdcOptions
     {
         String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(
                 instance -> instance.delegate().nodeSettings().releaseVersion());
-        return CassandraVersion.fromVersion(releaseVersion).orElse(CassandraVersion.FOURZERO);
+        return cassandraBridgeFactory.cassandraVersion(releaseVersion).orElse(CassandraVersion.FOURZERO);
     }
 
     /**

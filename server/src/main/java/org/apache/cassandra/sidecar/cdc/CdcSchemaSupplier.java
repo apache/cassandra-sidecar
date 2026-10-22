@@ -24,8 +24,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.cassandra.bridge.CassandraBridge;
-import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
+import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
@@ -51,15 +51,18 @@ import org.apache.cassandra.spark.utils.TableIdentifier;
 public class CdcSchemaSupplier implements SchemaSupplier
 {
     private final InstanceMetadataFetcher instanceMetadataFetcher;
+    private final CassandraBridgeFactory cassandraBridgeFactory;
     private final CdcDatabaseAccessor cdcDatabaseAccessor;
     private final SidecarConfiguration sidecarConfiguration;
     private final ConcurrentHashMap<TableIdentifier, UUID> tableIdCache = new ConcurrentHashMap<>();
 
     public CdcSchemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher,
+                             CassandraBridgeFactory cassandraBridgeFactory,
                              CdcDatabaseAccessor cdcDatabaseAccessor,
                              SidecarConfiguration sidecarConfiguration)
     {
         this.instanceMetadataFetcher = instanceMetadataFetcher;
+        this.cassandraBridgeFactory = cassandraBridgeFactory;
         this.cdcDatabaseAccessor = cdcDatabaseAccessor;
         this.sidecarConfiguration = sidecarConfiguration;
     }
@@ -76,7 +79,7 @@ public class CdcSchemaSupplier implements SchemaSupplier
                 instance -> instance.delegate().metadata().exportSchemaAsString());
         NodeSettings nodeSettings = instanceMetadataFetcher.callOnFirstAvailableInstance(
                 instance -> instance.delegate().nodeSettings());
-        CassandraBridge cassandraBridge = CdcBridgeFactory.get(nodeSettings.releaseVersion());
+        CassandraBridge cassandraBridge = cassandraBridgeFactory.get(nodeSettings.releaseVersion());
         Partitioner partitioner = getPartitioner(nodeSettings);
         boolean batchStatementsEnabled = sidecarConfiguration.serviceConfiguration().cdcConfiguration().batchStatementsEnabled();
 
