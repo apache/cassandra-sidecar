@@ -58,6 +58,17 @@ class LocalJobTest
         assertThat(job.status()).isEqualTo(OperationalJobStatus.FAILED);
     }
 
+    @Test
+    void testCancelDoesNotChangeStatus()
+    {
+        LocalJob job = createSucceedingJob();
+
+        job.cancel();
+
+        assertThat(job.isCancelled()).isTrue();
+        assertThat(job.status()).isEqualTo(OperationalJobStatus.CREATED);
+    }
+
     private static LocalJob createSucceedingJob()
     {
         return new LocalJob(OPERATION_ID, NODE_ID, INSTANCE_HOST, OPERATION_TYPE)
