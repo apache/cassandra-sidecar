@@ -212,6 +212,17 @@ public abstract class OperationalJob implements Task<Void>, OperationalJobInfo
     }
 
     /**
+     * Seed node statuses and mark the job as RUNNING, only for a coordinated job that successfully started.
+     * A job that failed to start (e.g. it did not acquire the active operation lock) is already complete.
+     */
+    final boolean shouldActivate()
+    {
+        return requiresCoordination()
+               && nodeExecutionOrder() != null
+               && !asyncResult().isComplete();
+    }
+
+    /**
      * @return metadata associated with this operation, or null if not applicable
      */
     @Nullable
