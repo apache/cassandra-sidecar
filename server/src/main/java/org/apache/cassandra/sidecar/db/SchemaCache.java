@@ -73,8 +73,8 @@ public class SchemaCache implements PeriodicTask
     // Caches table schemas those that could not be parsed by Java driver
     private volatile ConcurrentNavigableMap<QualifiedTableName, String> unsupportedTableSchemaCache;
     private volatile ConcurrentNavigableMap<String, String> keyspaceSchemaCache;
-    // CQL schema of all keyspaces. It is invalidated whenever the schema of a keyspace is added to keyspaceSchemaCache
-    private final AtomicReference<String> fullSchemaCache = new AtomicReference<>();
+    // CQL schema of all keyspaces. It is invalidated whenever the schema of a keyspace is added to keyspaceSchemaCache.
+    private final AtomicReference<FullSchema> fullSchemaCache = new AtomicReference<>(new FullSchema(null));
     private volatile boolean initialized;
 
     private PreparedStatement tableListStatement;
@@ -97,14 +97,15 @@ public class SchemaCache implements PeriodicTask
     public String getFullSchema()
     {
         refreshIfUninitialized();
-        String fullSchema = fullSchemaCache.get();
-        if (fullSchema == null)
+        FullSchema cached = fullSchemaCache.get();
+        if (cached.schema != null)
         {
-            fullSchema = assembleFullSchema(keyspaceSchemaCache);
-            fullSchemaCache.compareAndSet(null, fullSchema);
+            return cached.schema;
         }
-        // The locally assembled schema is still returned, because the cache may have been invalidated again
-        // by the time the set fails
+        String fullSchema = assembleFullSchema(keyspaceSchemaCache);
+        // Cache only if nothing was added while assembling, the result would miss it otherwise.
+        // The assembled schema is returned either way
+        fullSchemaCache.compareAndSet(cached, new FullSchema(fullSchema));
         return fullSchema;
     }
 
@@ -121,6 +122,11 @@ public class SchemaCache implements PeriodicTask
         if (schema == null)
         {
             schema = populateKeyspaceSchemaCache(cache, keyspace);
+            if (schema != null)
+            {
+                // the keyspace was added to the live cache, so the cached full schema is outdated
+                setFullSchema(null);
+            }
         }
         return schema;
     }
@@ -229,7 +235,7 @@ public class SchemaCache implements PeriodicTask
                 populateKeyspaceSchemaCache(newKeyspaceSchemaCache, keyspace.name());
             }
             keyspaceSchemaCache = newKeyspaceSchemaCache;
-            fullSchemaCache.set(assembleFullSchema(newKeyspaceSchemaCache));
+            setFullSchema(assembleFullSchema(newKeyspaceSchemaCache));
             initialized = true;
         }
         catch (CassandraUnavailableException ignored)
@@ -248,8 +254,12 @@ public class SchemaCache implements PeriodicTask
         }
         String schema = String.join(STATEMENT_DELIMITER, cqlSchema);
         cache.put(keyspace, schema);
-        fullSchemaCache.set(null);
         return schema;
+    }
+
+    private void setFullSchema(@Nullable String fullSchema)
+    {
+        fullSchemaCache.set(new FullSchema(fullSchema));
     }
 
     private static String assembleFullSchema(Map<String, String> keyspaceSchemas)
@@ -352,5 +362,20 @@ public class SchemaCache implements PeriodicTask
             }
         }
         return result.toString().trim();
+    }
+
+    /**
+     * Holder of the cached full schema. Compared by identity, so every update is distinguishable from the previous
+     * one even when the cached value is the same
+     */
+    private static final class FullSchema
+    {
+        @Nullable
+        final String schema;
+
+        FullSchema(@Nullable String schema)
+        {
+            this.schema = schema;
+        }
     }
 }
