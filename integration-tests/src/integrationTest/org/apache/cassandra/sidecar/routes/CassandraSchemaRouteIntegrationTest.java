@@ -134,9 +134,9 @@ class CassandraSchemaRouteIntegrationTest extends SharedClusterSidecarIntegratio
                                                              .send()
                                                              .expecting(HttpResponseExpectation.SC_OK))
                                   .bodyAsJson(SchemaResponse.class);
-        assertThat(response.schema()).contains(convertToUpperCase(describeKeyspace("testkeyspace")));
-        assertThat(response.schema()).contains(convertToUpperCase(describeKeyspace("\"Cycling\"")));
-        assertThat(response.schema()).contains(convertToUpperCase(describeKeyspace("\"keyspace\"")));
+        assertThat(response.schema()).contains(describeKeyspace("testkeyspace"));
+        assertThat(response.schema()).contains(describeKeyspace("\"Cycling\""));
+        assertThat(response.schema()).contains(describeKeyspace("\"keyspace\""));
         assertThat(response.schema()).contains("CREATE KEYSPACE system_traces");
     }
 
