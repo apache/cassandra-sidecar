@@ -96,12 +96,7 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
 
         if (mappingFunctionTracker.wasInvoked())
         {
-            // Seed node statuses and mark the job as RUNNING, only for a coordinated job that successfully started.
-            // A job that failed to start (e.g. it did not acquire the active operation lock) is already complete
-            boolean activatingCoordinatedJob = job.requiresCoordination()
-                                               && job.nodeExecutionOrder() != null
-                                               && !job.asyncResult().isComplete();
-            persistInitialRecord(job, activatingCoordinatedJob, 1);
+            persistInitialRecord(job, job.shouldActivate(), 1);
         }
 
         return job;
