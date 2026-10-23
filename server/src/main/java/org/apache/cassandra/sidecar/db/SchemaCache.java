@@ -216,7 +216,6 @@ public class SchemaCache implements PeriodicTask
         {
             Session session = sessionProvider.get();
             prepareStatements(session);
-
             Set<QualifiedTableName> tables = queryAllTables(session);
             Set<QualifiedTableName> driverKnownTables = driverKnownTables(session);
             tables.removeAll(driverKnownTables);
@@ -227,13 +226,12 @@ public class SchemaCache implements PeriodicTask
                 LOGGER.debug("Tables not supported by Java driver metadata: {}", tables);
                 tables.forEach(table -> populateTableSchemaCache(newTableSchemaCache, table));
             }
-            unsupportedTableSchemaCache = newTableSchemaCache;
-
             ConcurrentNavigableMap<String, String> newKeyspaceSchemaCache = createKeyspaceSchemaCache();
             for (Name keyspace : schemaAccessor.getKeyspaces())
             {
                 populateKeyspaceSchemaCache(newKeyspaceSchemaCache, keyspace.name());
             }
+            unsupportedTableSchemaCache = newTableSchemaCache;
             keyspaceSchemaCache = newKeyspaceSchemaCache;
             setFullSchema(assembleFullSchema(newKeyspaceSchemaCache));
             initialized = true;
