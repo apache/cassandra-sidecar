@@ -130,7 +130,8 @@ class CassandraClusterSchemaMonitorTest
         .thenReturn(mockNodeSettings);
 
         // Setup database accessor
-        when(mockSchemaCache.getFullSchema()).thenReturn(INITIAL_SCHEMA);
+        when(mockDatabaseAccessor.fullSchema()).thenReturn(INITIAL_SCHEMA);
+        when(mockSchemaCache.getUnsupportedTableSchema()).thenReturn("");
         when(mockDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(mockDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
         mockCdcBridgeFactory.when(() -> CdcBridgeFactory.getCdcBridge(any(CassandraBridge.class))).thenReturn(mockCdcBridge);
@@ -225,7 +226,7 @@ class CassandraClusterSchemaMonitorTest
             .thenAnswer(CassandraClusterSchemaMonitorTest::mockCqlTableFromBuildSchemaArgs);
 
             // First call returns initial schema, second call returns updated schema
-            when(mockSchemaCache.getFullSchema())
+            when(mockDatabaseAccessor.fullSchema())
             .thenReturn(INITIAL_SCHEMA)
             .thenReturn(UPDATED_SCHEMA);
 
@@ -236,8 +237,7 @@ class CassandraClusterSchemaMonitorTest
             clusterSchema.refresh();
 
             // Verify initial schema processing
-            verify(mockSchemaCache, times(1)).getFullSchema();
-            verify(mockDatabaseAccessor, never()).fullSchema();
+            verify(mockDatabaseAccessor, times(1)).fullSchema();
             verify(mockCdcBridge, times(1)).updateCdcSchema(tablesCaptor.capture(), eq(Partitioner.Murmur3Partitioner), any());
             assertThat(tablesCaptor.getValue()).hasSize(1);
 
@@ -245,8 +245,7 @@ class CassandraClusterSchemaMonitorTest
             clusterSchema.refresh();
 
             // Verify schema change detection and update
-            verify(mockSchemaCache, times(2)).getFullSchema();
-            verify(mockDatabaseAccessor, never()).fullSchema();
+            verify(mockDatabaseAccessor, times(2)).fullSchema();
             verify(mockCdcBridge, times(2)).updateCdcSchema(tablesCaptor.capture(), eq(Partitioner.Murmur3Partitioner), any());
             assertThat(tablesCaptor.getValue()).hasSize(2);
         }
@@ -284,7 +283,7 @@ class CassandraClusterSchemaMonitorTest
             when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class)))
             .thenAnswer(CassandraClusterSchemaMonitorTest::mockCqlTableFromBuildSchemaArgs);
 
-            when(mockSchemaCache.getFullSchema())
+            when(mockDatabaseAccessor.fullSchema())
             .thenReturn(initialMixedSchema)
             .thenReturn(updatedMismatchedSchema);
 
@@ -319,9 +318,9 @@ class CassandraClusterSchemaMonitorTest
             .thenAnswer(CassandraClusterSchemaMonitorTest::mockCqlTableFromBuildSchemaArgs);
 
             // Same table set every refresh — nothing ever becomes stale.
-            when(mockSchemaCache.getFullSchema())
+            when(mockDatabaseAccessor.fullSchema())
             .thenReturn(INITIAL_SCHEMA)
-            .thenReturn(INITIAL_SCHEMA + " ");  // trailing space forces a "schema changed" refresh without changing the table set
+            .thenReturn(INITIAL_SCHEMA + " -- changed");  // forces a "schema changed" refresh without changing the table set
 
             clusterSchema.refresh();
             clusterSchema.refresh();
@@ -366,7 +365,7 @@ class CassandraClusterSchemaMonitorTest
             when(mockCassandraBridge.buildSchema(anyString(), anyString(), any(ReplicationFactor.class), any(Partitioner.class), any(Set.class), any(UUID.class), any(Integer.class), any(Boolean.class)))
             .thenAnswer(CassandraClusterSchemaMonitorTest::mockCqlTableFromBuildSchemaArgs);
 
-            when(mockSchemaCache.getFullSchema())
+            when(mockDatabaseAccessor.fullSchema())
             .thenReturn(initialMixedSchema)
             .thenReturn(updatedMismatchedSchema)
             .thenReturn(thirdRefreshSchema);
@@ -414,7 +413,7 @@ class CassandraClusterSchemaMonitorTest
             clusterSchema.refresh();
 
             // Should not call updateCdcSchema again since schema hasn't changed
-            verify(mockSchemaCache, times(2)).getFullSchema();
+            verify(mockDatabaseAccessor, times(2)).fullSchema();
             verify(mockCdcBridge, times(1)).updateCdcSchema(any(Set.class), any(Partitioner.class), any());
         }
     }
@@ -451,7 +450,7 @@ class CassandraClusterSchemaMonitorTest
     void testRefreshHandlesIllegalStateExceptionGracefully()
     {
 
-        when(mockSchemaCache.getFullSchema()).thenThrow(new IllegalStateException("Database not ready"));
+        when(mockDatabaseAccessor.fullSchema()).thenThrow(new IllegalStateException("Database not ready"));
 
         // Should now throw the exception instead of handling it gracefully
         try
@@ -464,7 +463,7 @@ class CassandraClusterSchemaMonitorTest
             assertThat(e.getMessage()).isEqualTo("Database not ready");
         }
 
-        verify(mockSchemaCache, times(1)).getFullSchema();
+        verify(mockDatabaseAccessor, times(1)).fullSchema();
         // CdcBridge should not be called due to exception
     }
 
@@ -472,7 +471,7 @@ class CassandraClusterSchemaMonitorTest
     void testRefreshHandlesGenericExceptionGracefully()
     {
 
-        when(mockSchemaCache.getFullSchema()).thenThrow(new IllegalStateException("Unexpected error"));
+        when(mockDatabaseAccessor.fullSchema()).thenThrow(new IllegalStateException("Unexpected error"));
 
         // Should now throw the exception instead of handling it gracefully
         try
@@ -485,7 +484,7 @@ class CassandraClusterSchemaMonitorTest
             assertThat(e.getMessage()).isEqualTo("Unexpected error");
         }
 
-        verify(mockSchemaCache, times(1)).getFullSchema();
+        verify(mockDatabaseAccessor, times(1)).fullSchema();
         // CdcBridge should not be called due to exception
     }
 
@@ -522,7 +521,7 @@ class CassandraClusterSchemaMonitorTest
         Promise<Void> promise = mock(Promise.class);
         RuntimeException expectedException = new RuntimeException("Refresh failed");
 
-        when(mockSchemaCache.getFullSchema()).thenThrow(expectedException);
+        when(mockDatabaseAccessor.fullSchema()).thenThrow(expectedException);
 
         clusterSchema.execute(promise);
 
@@ -625,7 +624,7 @@ class CassandraClusterSchemaMonitorTest
         AtomicBoolean listenerCalled = new AtomicBoolean(false);
         clusterSchema.addSchemaChangeListener(() -> listenerCalled.set(true));
 
-        when(mockSchemaCache.getFullSchema()).thenThrow(new RuntimeException("Error"));
+        when(mockDatabaseAccessor.fullSchema()).thenThrow(new RuntimeException("Error"));
 
         // Should now throw the exception instead of handling it gracefully
         try
