@@ -39,6 +39,7 @@ import io.vertx.core.Promise;
 import org.apache.cassandra.sidecar.TestModule;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.ConsistencyLevel;
+import org.apache.cassandra.sidecar.common.data.RestoreJobSecrets;
 import org.apache.cassandra.sidecar.common.data.RestoreJobStatus;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
 import org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRange;
@@ -54,6 +55,7 @@ import org.apache.cassandra.sidecar.db.RestoreSliceTest;
 import org.apache.cassandra.sidecar.db.schema.SidecarSchema;
 import org.apache.cassandra.sidecar.exceptions.CassandraUnavailableException;
 import org.apache.cassandra.sidecar.exceptions.RestoreJobExceptions;
+import org.apache.cassandra.sidecar.foundation.RestoreJobSecretsGen;
 import org.apache.cassandra.sidecar.metrics.MetricRegistryFactory;
 import org.apache.cassandra.sidecar.metrics.SidecarMetrics;
 import org.apache.cassandra.sidecar.metrics.SidecarMetricsImpl;
@@ -273,6 +275,30 @@ class RestoreJobDiscovererTest
 
         List<UUID> expectedAbortedJobs = mockResult.stream().map(s -> s.jobId).collect(Collectors.toList());
         assertThat(abortedJobs.getAllValues()).isEqualTo(expectedAbortedJobs);
+    }
+
+    @Test
+    void testSecretsRemovedOnlyFromFinalJobsHavingSecrets()
+    {
+        when(sidecarSchema.isInitialized()).thenReturn(true);
+        Date expireAt = new Date(System.currentTimeMillis() + 10000L);
+        RestoreJobSecrets secrets = RestoreJobSecretsGen.genRestoreJobSecrets();
+        List<RestoreJob> jobs = new ArrayList<>();
+        UUID[] finalWithSecrets = { UUIDs.timeBased(), UUIDs.timeBased(), UUIDs.timeBased() };
+        jobs.add(createUpdatedJob(finalWithSecrets[0], "agent", RestoreJobStatus.SUCCEEDED, secrets, expireAt));
+        jobs.add(createUpdatedJob(finalWithSecrets[1], "agent", RestoreJobStatus.FAILED, secrets, expireAt));
+        jobs.add(createUpdatedJob(finalWithSecrets[2], "agent", RestoreJobStatus.ABORTED, secrets, expireAt));
+        // secrets are already removed
+        jobs.add(createUpdatedJob(UUIDs.timeBased(), "agent", RestoreJobStatus.SUCCEEDED, null, expireAt));
+        // not final yet; secrets are still needed
+        jobs.add(createUpdatedJob(UUIDs.timeBased(), "agent", RestoreJobStatus.CREATED, secrets, expireAt));
+        when(mockJobAccessor.findAllRecent(anyLong(), anyInt())).thenReturn(jobs);
+
+        executeBlocking();
+
+        ArgumentCaptor<UUID> removed = ArgumentCaptor.forClass(UUID.class);
+        verify(mockJobAccessor, times(3)).removeSecrets(removed.capture());
+        assertThat(removed.getAllValues()).containsExactlyInAnyOrder(finalWithSecrets);
     }
 
     @Test
