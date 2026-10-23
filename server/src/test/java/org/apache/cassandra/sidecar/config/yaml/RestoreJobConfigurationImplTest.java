@@ -21,9 +21,9 @@ package org.apache.cassandra.sidecar.config.yaml;
 import java.io.IOException;
 import java.util.EnumSet;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
