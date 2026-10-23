@@ -18,6 +18,9 @@
 
 package org.apache.cassandra.sidecar.config;
 
+import java.util.Set;
+
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
@@ -73,4 +76,10 @@ public interface RestoreJobConfiguration
      * @return the delay for {@link org.apache.cassandra.sidecar.restore.RingTopologyRefresher}
      */
     MillisecondBoundConfiguration ringTopologyRefreshDelay();
+
+    /**
+     * @return the set of {@link CredentialType}s that the operator allows restore jobs to use;
+     * a request declaring any other credential type must be rejected at job creation time
+     */
+    Set<CredentialType> allowedCredentialTypes();
 }

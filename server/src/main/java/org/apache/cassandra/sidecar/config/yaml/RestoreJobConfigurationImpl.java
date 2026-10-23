@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.util.EnumSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -25,8 +27,10 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.DataObjectBuilder;
+import org.apache.cassandra.sidecar.common.data.CredentialType;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.utils.Preconditions;
 import org.apache.cassandra.sidecar.config.RestoreJobConfiguration;
 
 /**
@@ -56,6 +60,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
     // report once a minute
     private static final SecondBoundConfiguration DEFAULT_RESTORE_JOB_SLOW_TASK_REPORT_DELAY = SecondBoundConfiguration.parse("1m");
     public static final MillisecondBoundConfiguration DEFAULT_RING_TOPOLOGY_REFRESH_DELAY = MillisecondBoundConfiguration.parse("1m");
+    // No restriction by default, preserving pre-existing behavior where the client's declared credentialType is trusted as-is.
+    private static final Set<CredentialType> DEFAULT_ALLOWED_CREDENTIAL_TYPES = EnumSet.allOf(CredentialType.class);
 
     protected MillisecondBoundConfiguration jobDiscoveryActiveLoopDelay;
 
@@ -77,6 +83,8 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
 
     private MillisecondBoundConfiguration ringTopologyRefreshDelay;
 
+    protected Set<CredentialType> allowedCredentialTypes;
+
     protected RestoreJobConfigurationImpl()
     {
         this(builder());
@@ -93,6 +101,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         this.slowTaskThreshold = builder.slowTaskThreshold;
         this.slowTaskReportDelay = builder.slowTaskReportDelay;
         this.ringTopologyRefreshDelay = builder.ringTopologyRefreshDelay;
+        this.allowedCredentialTypes = builder.allowedCredentialTypes;
         validate();
     }
 
@@ -108,6 +117,10 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         {
             throw new IllegalArgumentException("JobDiscoveryMinimumRecencyDays (in seconds) cannot be greater than "
                                                + ttl);
+        }
+        if (allowedCredentialTypes == null || allowedCredentialTypes.isEmpty())
+        {
+            throw new IllegalArgumentException("allowedCredentialTypes must not be empty");
         }
     }
 
@@ -324,6 +337,24 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         setRingTopologyRefreshDelay(new MillisecondBoundConfiguration(ringTopologyRefreshDelayMillis, TimeUnit.MILLISECONDS));
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = "allowed_credential_types")
+    public Set<CredentialType> allowedCredentialTypes()
+    {
+        return allowedCredentialTypes;
+    }
+
+    @JsonProperty(value = "allowed_credential_types")
+    public void setAllowedCredentialTypes(Set<CredentialType> allowedCredentialTypes)
+    {
+        Preconditions.checkArgument(allowedCredentialTypes != null && allowedCredentialTypes.size() > 0,
+                                    () -> "Invalid allowed_credential_types value: " + allowedCredentialTypes);
+        this.allowedCredentialTypes = allowedCredentialTypes;
+    }
+
     public static Builder builder()
     {
         return new Builder();
@@ -343,6 +374,7 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         private int processMaxConcurrency = DEFAULT_PROCESS_MAX_CONCURRENCY;
         private SecondBoundConfiguration restoreJobTablesTtl = DEFAULT_RESTORE_JOB_TABLES_TTL;
         private MillisecondBoundConfiguration ringTopologyRefreshDelay = DEFAULT_RING_TOPOLOGY_REFRESH_DELAY;
+        private Set<CredentialType> allowedCredentialTypes = DEFAULT_ALLOWED_CREDENTIAL_TYPES;
 
         protected Builder()
         {
@@ -460,6 +492,18 @@ public class RestoreJobConfigurationImpl implements RestoreJobConfiguration
         public Builder ringTopologyRefreshDelay(MillisecondBoundConfiguration ringTopologyRefreshDelay)
         {
             return update(b -> b.ringTopologyRefreshDelay = ringTopologyRefreshDelay);
+        }
+
+        /**
+         * Sets the {@code allowedCredentialTypes} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param allowedCredentialTypes the {@code allowedCredentialTypes} to set
+         * @return a reference to this Builder
+         */
+        public Builder allowedCredentialTypes(Set<CredentialType> allowedCredentialTypes)
+        {
+            return update(b -> b.allowedCredentialTypes = allowedCredentialTypes);
         }
 
         @Override

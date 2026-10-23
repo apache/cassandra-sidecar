@@ -434,6 +434,7 @@ This section defines input validations for Cassandra keyspace and directory name
 * `slow_task_threshold`: The threshold to consider a restore task as slow. By default, `10m`.
 * `slow_task_report_delay`: The delay between each report of the same slow task. By default, `1m`.
 * `ring_topology_refresh_delay`: This defines how often to periodically refresh the Cassandra ring. By default, `1m`.
+* `allowed_credential_types`: The list of credential types (`STATIC`, `IAM`) that restore jobs are allowed to use. A restore job creation request declaring a `credentialType` not in this list is rejected with an HTTP 400. Operators running multi-tenant, IAM-only environments can set this to `[IAM]` to prevent clients from supplying long-lived static credentials. By default, both `STATIC` and `IAM` are allowed.
 
 [[s3-client]]
 ### s3_client
