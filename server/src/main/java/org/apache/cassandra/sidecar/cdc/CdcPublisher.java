@@ -27,6 +27,7 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.CdcLogMode;
 import org.apache.cassandra.cdc.TypeCache;
@@ -40,7 +41,6 @@ import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.stats.ICdcStats;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.common.server.utils.DurationSpec;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -78,7 +78,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
     private final ICdcStats cdcStats;
     private CdcManager cdcManager;
     private final Provider<RangeManager> rangeManagerProvider;
-    private final CassandraBridgeFactory cassandraBridgeFactory;
+    private final Provider<CassandraBridge> cassandraBridgeProvider;
     private final CachingSchemaStore schemaStore;
     private KafkaPublisher<?> kafkaPublisher;
     private final Provider<SidecarCdcClient> sidecarCdcClientProvider;
@@ -97,7 +97,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                         CdcSystemViewsDatabaseAccessor systemViews,
                         SidecarCdcStats sidecarCdcStats,
                         Provider<RangeManager> rangeManagerProvider,
-                        CassandraBridgeFactory cassandraBridgeFactory,
+                        Provider<CassandraBridge> cassandraBridgeProvider,
                         Provider<SidecarCdcClient> sidecarCdcClientProvider,
                         CachingSchemaStore schemaStore,
                         KafkaProducerFactory kafkaProducerFactory,
@@ -113,7 +113,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         this.clusterConfigProvider = clusterConfigProvider;
         this.cdcStats = cdcStats;
         this.rangeManagerProvider = rangeManagerProvider;
-        this.cassandraBridgeFactory = cassandraBridgeFactory;
+        this.cassandraBridgeProvider = cassandraBridgeProvider;
         this.sidecarCdcClientProvider = sidecarCdcClientProvider;
         this.schemaStore = schemaStore;
         this.kafkaProducerFactory = kafkaProducerFactory;
@@ -137,10 +137,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 
     public EventConsumer eventConsumer(CdcConfig conf)
     {
-        CassandraVersion version = cassandraBridgeFactory.get(
-            instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
-                instance.delegate().nodeSettings()).releaseVersion()
-        ).getVersion();
+        CassandraVersion version = cassandraBridgeProvider.get().getVersion();
 
         if (conf.logOnly())
         {

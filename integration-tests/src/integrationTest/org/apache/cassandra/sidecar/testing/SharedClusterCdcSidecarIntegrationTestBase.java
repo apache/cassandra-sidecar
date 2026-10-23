@@ -28,6 +28,7 @@ import com.google.inject.Provider;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
@@ -36,7 +37,6 @@ import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.stats.ICdcStats;
 import org.apache.cassandra.distributed.api.ICluster;
 import org.apache.cassandra.distributed.api.IInstance;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cdc.CdcConfig;
 import org.apache.cassandra.sidecar.cdc.CdcPublisher;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
@@ -182,7 +182,7 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                   CdcSystemViewsDatabaseAccessor systemViews,
                                   SidecarCdcStats sidecarCdcStats,
                                   TokenRingProvider tokenRingProvider,
-                                  CassandraBridgeFactory cassandraBridgeFactory,
+                                  Provider<CassandraBridge> cassandraBridgeProvider,
                                   Provider<SidecarCdcClient> sidecarCdcClientProvider,
                                   CdcOptions cdcOptions)
         {
@@ -198,7 +198,7 @@ public abstract class SharedClusterCdcSidecarIntegrationTestBase extends SharedC
                                        systemViews,
                                        sidecarCdcStats,
                                        () -> rangeManager,
-                                       cassandraBridgeFactory,
+                                       cassandraBridgeProvider,
                                        sidecarCdcClientProvider,
                                        cdcOptions);
         }

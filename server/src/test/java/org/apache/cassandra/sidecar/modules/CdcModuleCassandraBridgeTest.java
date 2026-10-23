@@ -17,79 +17,87 @@
  * under the License.
  */
 
-package org.apache.cassandra.sidecar.bridge;
+package org.apache.cassandra.sidecar.modules;
 
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.inject.Binding;
+import com.google.inject.Key;
+import com.google.inject.Scopes;
+import com.google.inject.spi.Elements;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CdcBridge;
 import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.TypeCache;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlField;
 import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.data.ReplicationFactor;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
- * Unit tests for {@link CassandraBridgeFactory}
+ * Unit tests for the {@link CassandraBridge} binding of {@link CdcModule}
  */
-class CassandraBridgeFactoryTest
+class CdcModuleCassandraBridgeTest
 {
-    private static final String CASSANDRA_VERSION = "5.0.0";
-    private static final String KEYSPACE = "bridge_factory_test_ks";
+    private static final String KEYSPACE = "cdc_module_bridge_test_ks";
     private static final ReplicationFactor REPLICATION_FACTOR =
     new ReplicationFactor(ReplicationFactor.ReplicationStrategy.NetworkTopologyStrategy, Map.of("DC1", 3));
 
-    private final CassandraBridgeFactory factory = new CassandraBridgeFactory();
+    private final CdcModule module = new CdcModule();
+    private final InstanceMetadataFetcher instanceMetadataFetcher = mock(InstanceMetadataFetcher.class);
+
+    @Test
+    void testBindingIsNotASingleton()
+    {
+        // A singleton would pin the bridge of the version first seen, and fail injection while no instance is up
+        Binding<?> binding = Elements.getElements(module).stream()
+                                     .filter(element -> element instanceof Binding)
+                                     .map(element -> (Binding<?>) element)
+                                     .filter(element -> element.getKey().equals(Key.get(CassandraBridge.class)))
+                                     .findFirst()
+                                     .orElseThrow(AssertionError::new);
+
+        assertThat(Scopes.isSingleton(binding)).isFalse();
+    }
+
+    @Test
+    void testResolvesTheReleaseVersionOnEachCall()
+    {
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn("4.1.0", "5.0.4");
+
+        CassandraBridge before = module.cassandraBridge(instanceMetadataFetcher);
+        // e.g. after the instances are upgraded
+        CassandraBridge after = module.cassandraBridge(instanceMetadataFetcher);
+
+        assertThat(before).isSameAs(CdcBridgeFactory.get(CassandraVersion.FOURONE));
+        assertThat(after).isSameAs(CdcBridgeFactory.get(CassandraVersion.FIVEZERO))
+                         .isNotSameAs(before);
+    }
 
     @Test
     void testSharesClassLoaderWithCdcBridge()
     {
-        CassandraBridge bridge = factory.get(CASSANDRA_VERSION);
-        CdcBridge cdcBridge = factory.getCdcBridge(bridge);
-        CqlToAvroSchemaConverter avroSchemaConverter = factory.getCqlToAvroSchemaConverter(bridge);
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn("5.0.4");
 
-        assertThat(bridge).isSameAs(CdcBridgeFactory.get(CASSANDRA_VERSION));
-        assertThat(cdcBridge).isSameAs(CdcBridgeFactory.getCdcBridge(bridge));
-        assertThat(avroSchemaConverter).isSameAs(CdcBridgeFactory.getCqlToAvroSchemaConverter(bridge));
+        CassandraBridge bridge = module.cassandraBridge(instanceMetadataFetcher);
+        CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(bridge);
+        CqlToAvroSchemaConverter avroSchemaConverter = CdcBridgeFactory.getCqlToAvroSchemaConverter(bridge);
+
         ClassLoader classLoader = bridge.getClass().getClassLoader();
         assertThat(cdcBridge.getClass().getClassLoader()).isSameAs(classLoader);
         assertThat(avroSchemaConverter.getClass().getClassLoader()).isSameAs(classLoader);
-    }
-
-    @Test
-    void testCassandraVersion()
-    {
-        assertThat(factory.cassandraVersion("5.0.4")).contains(CassandraVersion.FIVEZERO);
-        assertThat(factory.cassandraVersion("4.0.17")).contains(CassandraVersion.FOURZERO);
-        assertThat(factory.cassandraVersion("9.9.9")).isEmpty();
-        assertThatThrownBy(() -> factory.get("9.9.9")).isInstanceOf(IllegalArgumentException.class)
-                                                    .hasMessageContaining("9.9.9");
-    }
-
-    @Test
-    void testGetByReleaseVersionUsesCassandraVersion()
-    {
-        CassandraBridgeFactory overriding = new CassandraBridgeFactory()
-        {
-            @Override
-            public Optional<CassandraVersion> cassandraVersion(String releaseVersion)
-            {
-                return "custom-1.0".equals(releaseVersion) ? Optional.of(CassandraVersion.FIVEZERO) : super.cassandraVersion(releaseVersion);
-            }
-        };
-
-        assertThat(overriding.get("custom-1.0")).isSameAs(CdcBridgeFactory.get(CassandraVersion.FIVEZERO));
     }
 
     @Test
@@ -98,7 +106,8 @@ class CassandraBridgeFactoryTest
         // Mirrors the CDC flow: Sidecar parses the schema with its bridge, the UDTs are registered
         // in the CDC bridge's types (CassandraSchema#updateCdcSchema), and TypeCache later resolves
         // column types against them when deserializing/serializing mutations.
-        CassandraBridge bridge = factory.get(CASSANDRA_VERSION);
+        when(instanceMetadataFetcher.callOnFirstAvailableInstance(any())).thenReturn("5.0.4");
+        CassandraBridge bridge = module.cassandraBridge(instanceMetadataFetcher);
         String udt = "CREATE TYPE " + KEYSPACE + ".task_result (status text, message text);";
         String table = "CREATE TABLE " + KEYSPACE + ".task (id uuid PRIMARY KEY, name text, " +
                        "results list<frozen<task_result>>) WITH cdc = true;";

@@ -21,9 +21,11 @@ package org.apache.cassandra.sidecar.cdc;
 import java.time.Duration;
 import java.util.Map;
 
+import com.google.inject.Provider;
+import com.google.inject.ProvisionException;
+import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.ReplicationFactor;
 
@@ -39,15 +41,15 @@ public class SidecarCdcOptions implements CdcOptions
 {
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final CdcConfig conf;
-    private final CassandraBridgeFactory cassandraBridgeFactory;
+    private final Provider<CassandraBridge> cassandraBridgeProvider;
 
     public SidecarCdcOptions(InstanceMetadataFetcher instanceMetadataFetcher,
                              CdcConfig conf,
-                             CassandraBridgeFactory cassandraBridgeFactory)
+                             Provider<CassandraBridge> cassandraBridgeProvider)
     {
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.conf = conf;
-        this.cassandraBridgeFactory = cassandraBridgeFactory;
+        this.cassandraBridgeProvider = cassandraBridgeProvider;
     }
 
 
@@ -67,9 +69,19 @@ public class SidecarCdcOptions implements CdcOptions
     @Override
     public CassandraVersion version()
     {
-        String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(
-                instance -> instance.delegate().nodeSettings().releaseVersion());
-        return cassandraBridgeFactory.cassandraVersion(releaseVersion).orElse(CassandraVersion.FOURZERO);
+        try
+        {
+            return cassandraBridgeProvider.get().getVersion();
+        }
+        catch (ProvisionException exception)
+        {
+            // The bridge binding rejects release versions it does not support
+            if (exception.getCause() instanceof IllegalArgumentException)
+            {
+                return CassandraVersion.FOURZERO;
+            }
+            throw exception;
+        }
     }
 
     /**

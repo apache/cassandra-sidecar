@@ -43,7 +43,6 @@ import org.apache.cassandra.cdc.sidecar.ClusterConfigProvider;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcClient;
 import org.apache.cassandra.cdc.sidecar.SidecarCdcStats;
 import org.apache.cassandra.cdc.stats.ICdcStats;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.server.ThrowingRunnable;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
@@ -63,7 +62,6 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CDC_CAC
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_SERVER_STOP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.RETURNS_DEEP_STUBS;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -105,7 +103,7 @@ public class CdcPublisherTests
     @Mock
     private Provider<RangeManager> rangeManager;
     @Mock
-    private CassandraBridgeFactory cassandraBridgeFactory;
+    private Provider<CassandraBridge> cassandraBridgeProvider;
     @Mock
     private SidecarCdcClient sidecarCdcClient;
     @Mock
@@ -141,7 +139,7 @@ public class CdcPublisherTests
             systemViews,
             sidecarCdcStats,
             rangeManager,
-            cassandraBridgeFactory,
+            cassandraBridgeProvider,
             () -> sidecarCdcClient,
             schemaStore,
             kafkaProducerFactory,
@@ -195,7 +193,7 @@ public class CdcPublisherTests
         new CdcPublisher(
             vertx, executorPools, clusterConfigProvider, schemaSupplier, instanceMetadataFetcher,
             enabledConfig, databaseAccessor, cdcStats, systemViews, freshSidecarCdcStats, rangeManager,
-            cassandraBridgeFactory, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
+            cassandraBridgeProvider, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
         );
 
         verify(freshSidecarCdcStats).captureCdcEnabled();
@@ -212,7 +210,7 @@ public class CdcPublisherTests
         new CdcPublisher(
             vertx, executorPools, clusterConfigProvider, schemaSupplier, instanceMetadataFetcher,
             disabledConfig, databaseAccessor, cdcStats, systemViews, freshSidecarCdcStats, rangeManager,
-            cassandraBridgeFactory, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
+            cassandraBridgeProvider, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
         );
 
         verify(freshSidecarCdcStats).captureCdcDisabled();
@@ -282,7 +280,7 @@ public class CdcPublisherTests
 
         CassandraBridge mockBridge = mock(CassandraBridge.class);
         when(mockBridge.getVersion()).thenReturn(CassandraVersion.FOURONE);
-        when(cassandraBridgeFactory.get(anyString())).thenReturn(mockBridge);
+        when(cassandraBridgeProvider.get()).thenReturn(mockBridge);
     }
 
 

@@ -20,12 +20,11 @@ package org.apache.cassandra.sidecar.cdc;
 
 
 import com.google.inject.Inject;
+import com.google.inject.Provider;
 import org.apache.avro.Schema;
 import org.apache.cassandra.bridge.CassandraBridge;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
-import org.apache.cassandra.sidecar.bridge.CassandraBridgeFactory;
-import org.apache.cassandra.sidecar.common.response.NodeSettings;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
 
 /**
@@ -33,27 +32,23 @@ import org.apache.cassandra.spark.data.CqlTable;
  */
 public class SidecarCqlToAvroSchemaConverter implements CqlToAvroSchemaConverter
 {
-    private final InstanceMetadataFetcher instanceMetadataFetcher;
-    private final CassandraBridgeFactory cassandraBridgeFactory;
+    private final Provider<CassandraBridge> cassandraBridgeProvider;
 
 
     @Inject
-    public SidecarCqlToAvroSchemaConverter(InstanceMetadataFetcher instanceMetadataFetcher,
-                                           CassandraBridgeFactory cassandraBridgeFactory)
+    public SidecarCqlToAvroSchemaConverter(Provider<CassandraBridge> cassandraBridgeProvider)
     {
-        this.instanceMetadataFetcher = instanceMetadataFetcher;
-        this.cassandraBridgeFactory = cassandraBridgeFactory;
+        this.cassandraBridgeProvider = cassandraBridgeProvider;
     }
 
     public CassandraBridge cassandraBridge()
     {
-        NodeSettings nodeSettings = instanceMetadataFetcher.callOnFirstAvailableInstance(instance-> instance.delegate().nodeSettings());
-        return cassandraBridgeFactory.get(nodeSettings.releaseVersion());
+        return cassandraBridgeProvider.get();
     }
 
 
     public Schema convert(CqlTable cqlTable)
     {
-        return cassandraBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge()).convert(cqlTable);
+        return CdcBridgeFactory.getCqlToAvroSchemaConverter(cassandraBridge()).convert(cqlTable);
     }
 }
