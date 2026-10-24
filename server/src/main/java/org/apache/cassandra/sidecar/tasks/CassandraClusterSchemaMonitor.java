@@ -32,6 +32,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.inject.Provider;
 import io.vertx.core.Promise;
 import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CdcBridge;
@@ -82,17 +83,20 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     private final CopyOnWriteArrayList<Runnable> schemaChangeListeners = new CopyOnWriteArrayList<>();
     private final SidecarConfiguration sidecarConfiguration;
     private final InstanceMetadataFetcher instanceFetcher;
+    private final Provider<CassandraBridge> cassandraBridgeProvider;
 
     public CassandraClusterSchemaMonitor(InstanceMetadataFetcher instanceFetcher,
                                          CdcDatabaseAccessor databaseAccessor,
                                          DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
-                                         SidecarConfiguration sidecarConfiguration)
+                                         SidecarConfiguration sidecarConfiguration,
+                                         Provider<CassandraBridge> cassandraBridgeProvider)
     {
 
         this.instanceFetcher = instanceFetcher;
         this.databaseAccessor = databaseAccessor;
         this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
         this.sidecarConfiguration = sidecarConfiguration;
+        this.cassandraBridgeProvider = cassandraBridgeProvider;
     }
 
     public void addSchemaChangeListener(Runnable listener)
@@ -103,7 +107,7 @@ public class CassandraClusterSchemaMonitor implements PeriodicTask
     public void refresh()
     {
         NodeSettings nodeSettings = instanceFetcher.callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings());
-        CassandraBridge cassandraBridge = CdcBridgeFactory.get(nodeSettings.releaseVersion());
+        CassandraBridge cassandraBridge = cassandraBridgeProvider.get();
         CdcBridge cdcBridge = CdcBridgeFactory.getCdcBridge(cassandraBridge);
 
         try

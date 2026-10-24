@@ -27,8 +27,8 @@ import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
-import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.CdcLogMode;
 import org.apache.cassandra.cdc.TypeCache;
 import org.apache.cassandra.cdc.api.CdcOptions;
@@ -78,6 +78,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
     private final ICdcStats cdcStats;
     private CdcManager cdcManager;
     private final Provider<RangeManager> rangeManagerProvider;
+    private final Provider<CassandraBridge> cassandraBridgeProvider;
     private final CachingSchemaStore schemaStore;
     private KafkaPublisher<?> kafkaPublisher;
     private final Provider<SidecarCdcClient> sidecarCdcClientProvider;
@@ -96,6 +97,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
                         CdcSystemViewsDatabaseAccessor systemViews,
                         SidecarCdcStats sidecarCdcStats,
                         Provider<RangeManager> rangeManagerProvider,
+                        Provider<CassandraBridge> cassandraBridgeProvider,
                         Provider<SidecarCdcClient> sidecarCdcClientProvider,
                         CachingSchemaStore schemaStore,
                         KafkaProducerFactory kafkaProducerFactory,
@@ -111,6 +113,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
         this.clusterConfigProvider = clusterConfigProvider;
         this.cdcStats = cdcStats;
         this.rangeManagerProvider = rangeManagerProvider;
+        this.cassandraBridgeProvider = cassandraBridgeProvider;
         this.sidecarCdcClientProvider = sidecarCdcClientProvider;
         this.schemaStore = schemaStore;
         this.kafkaProducerFactory = kafkaProducerFactory;
@@ -134,10 +137,7 @@ public class CdcPublisher implements Handler<Message<Object>>, PeriodicTask
 
     public EventConsumer eventConsumer(CdcConfig conf)
     {
-        CassandraVersion version = CdcBridgeFactory.get(
-            instanceMetadataFetcher.callOnFirstAvailableInstance(instance ->
-                instance.delegate().nodeSettings()).releaseVersion()
-        ).getVersion();
+        CassandraVersion version = cassandraBridgeProvider.get().getVersion();
 
         if (conf.logOnly())
         {

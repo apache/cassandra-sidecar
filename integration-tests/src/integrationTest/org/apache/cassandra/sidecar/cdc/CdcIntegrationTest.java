@@ -26,7 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
@@ -38,8 +37,8 @@ import org.apache.avro.generic.GenericRecord;
 import org.apache.avro.io.BinaryEncoder;
 import org.apache.avro.io.DecoderFactory;
 import org.apache.avro.io.EncoderFactory;
+import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.bridge.CassandraVersion;
-import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.TypeCache;
 import org.apache.cassandra.cdc.avro.AvroConstants;
 import org.apache.cassandra.cdc.avro.AvroGenericRecordTransformer;
@@ -49,7 +48,6 @@ import org.apache.cassandra.sidecar.tasks.CassandraClusterSchemaMonitor;
 import org.apache.cassandra.sidecar.testing.QualifiedName;
 import org.apache.cassandra.sidecar.testing.SharedClusterCdcSidecarIntegrationTestBase;
 import org.apache.cassandra.sidecar.testing.TestCdcEventConsumer;
-import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.utils.TableIdentifier;
 
 import static org.apache.cassandra.testing.TestUtils.DC1_RF1;
@@ -210,22 +208,15 @@ public class CdcIntegrationTest extends SharedClusterCdcSidecarIntegrationTestBa
         cluster.getFirstRunningInstance().flush(UDT_TABLE.keyspace());
 
         TestCdcEventConsumer consumer = getTestEventConsumer();
-        AtomicReference<CdcEvent> udtEvent = new AtomicReference<>();
-        waitUntil(() -> {
-            consumer.getEvents().stream()
-                    .filter(event -> event.table.equals(UDT_TABLE.table()))
-                    .findFirst()
-                    .ifPresent(udtEvent::set);
-            return udtEvent.get() != null;
-        }, 120, 1000);
-        CdcEvent event = udtEvent.get();
+        waitUntil(() -> consumer.getEvents().stream().anyMatch(event -> event.table.equals(UDT_TABLE.table())), 120, 1000);
+        CdcEvent event = consumer.getEvents().stream()
+                                 .filter(e -> e.table.equals(UDT_TABLE.table()))
+                                 .findFirst()
+                                 .orElseThrow(AssertionError::new);
 
         // Serialize the event to Avro as the Kafka publisher does, with Sidecar's schema store and type lookup
         Injector injector = serverWrapper.injector;
-        String releaseVersion = injector.getInstance(InstanceMetadataFetcher.class)
-                                        .callOnFirstAvailableInstance(instance -> instance.delegate().nodeSettings())
-                                        .releaseVersion();
-        CassandraVersion version = CdcBridgeFactory.get(releaseVersion).getVersion();
+        CassandraVersion version = injector.getInstance(CassandraBridge.class).getVersion();
         AvroGenericRecordTransformer transformer =
         new AvroGenericRecordTransformer(injector.getInstance(CachingSchemaStore.class),
                                          key -> TypeCache.get(version).getType(key.keyspace, key.type),

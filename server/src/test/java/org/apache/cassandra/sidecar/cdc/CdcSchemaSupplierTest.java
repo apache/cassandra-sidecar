@@ -26,7 +26,9 @@ import java.util.concurrent.ExecutionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import com.google.inject.Provider;
 import org.apache.cassandra.bridge.CassandraBridge;
+import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.bridge.CdcBridge;
 import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.sidecar.common.response.NodeSettings;
@@ -39,14 +41,12 @@ import org.apache.cassandra.spark.data.CqlTable;
 import org.apache.cassandra.spark.data.partitioner.Partitioner;
 import org.apache.cassandra.spark.utils.TableIdentifier;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -58,6 +58,8 @@ public class CdcSchemaSupplierTest
     private InstanceMetadataFetcher instanceMetadataFetcher;
     @Mock
     private CdcDatabaseAccessor cdcDatabaseAccessor;
+    @Mock
+    private Provider<CassandraBridge> cassandraBridgeProvider;
     @Mock
     private CassandraBridge cassandraBridge;
     @Mock
@@ -95,8 +97,11 @@ public class CdcSchemaSupplierTest
         when(serviceConfiguration.cdcConfiguration()).thenReturn(cdcConfiguration);
         when(cdcConfiguration.batchStatementsEnabled()).thenReturn(true);
 
+        when(cassandraBridgeProvider.get()).thenReturn(CdcBridgeFactory.get(CassandraVersion.FOURONE));
+
         cdcSchemaSupplier = new CdcSchemaSupplier(
             instanceMetadataFetcher,
+            cassandraBridgeProvider,
             cdcDatabaseAccessor,
             sidecarConfiguration
         );
@@ -259,7 +264,7 @@ public class CdcSchemaSupplierTest
     }
 
     @Test
-    void testGetCdcEnabledTablesCallsCdcBridgeFactory()
+    void testGetCdcEnabledTablesUsesTheProvidedBridge()
     {
         String releaseVersion = "4.1.0";
         NodeSettings nodeSettings = mockNodeSettings(releaseVersion, "Murmur3Partitioner");
@@ -271,12 +276,9 @@ public class CdcSchemaSupplierTest
         when(cdcDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(cdcDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
 
-        try (MockedStatic<CdcBridgeFactory> cdcBridgeFactory = mockStatic(CdcBridgeFactory.class, CALLS_REAL_METHODS))
-        {
-            cdcSchemaSupplier.getTables();
+        cdcSchemaSupplier.getTables();
 
-            cdcBridgeFactory.verify(() -> CdcBridgeFactory.get(releaseVersion));
-        }
+        verify(cassandraBridgeProvider).get();
     }
 
     private NodeSettings mockNodeSettings(String releaseVersion, String partitioner)

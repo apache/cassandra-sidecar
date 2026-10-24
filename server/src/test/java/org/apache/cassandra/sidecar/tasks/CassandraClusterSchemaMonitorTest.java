@@ -134,14 +134,14 @@ class CassandraClusterSchemaMonitorTest
         when(mockDriverUnsupportedSchemaCache.getFullSchema()).thenReturn("");
         when(mockDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(mockDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
-        mockCdcBridgeFactory.when(() -> CdcBridgeFactory.get(anyString())).thenReturn(mockCassandraBridge);
         mockCdcBridgeFactory.when(() -> CdcBridgeFactory.getCdcBridge(any(CassandraBridge.class))).thenReturn(mockCdcBridge);
 
         clusterSchema = new CassandraClusterSchemaMonitor(
         mockInstanceFetcher,
         mockDatabaseAccessor,
         mockDriverUnsupportedSchemaCache,
-        mockSidecarConfiguration
+        mockSidecarConfiguration,
+        () -> mockCassandraBridge
         );
     }
 

@@ -19,6 +19,7 @@ package org.apache.cassandra.sidecar.testing;
 
 import com.google.inject.Provider;
 import io.vertx.core.Vertx;
+import org.apache.cassandra.bridge.CassandraBridge;
 import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
@@ -60,13 +61,14 @@ public class TestCdcPublisher extends CdcPublisher
                             CdcSystemViewsDatabaseAccessor cdcSystemViews,
                             SidecarCdcStats sidecarCdcStats,
                             Provider<RangeManager> rangeManagerProvider,
+                            Provider<CassandraBridge> cassandraBridgeProvider,
                             Provider<SidecarCdcClient> sidecarCdcClientProvider,
                             CdcOptions cdcOptions)
     {
         super(vertx, executorPools, clusterConfigProvider,
               schemaSupplier, instanceMetadataFetcher, conf, databaseAccessor, cdcStats,
               cdcSystemViews, sidecarCdcStats, rangeManagerProvider,
-              sidecarCdcClientProvider,
+              cassandraBridgeProvider, sidecarCdcClientProvider,
               mock(CachingSchemaStore.class),
               mock(KafkaProducerFactory.class),
               cdcOptions);

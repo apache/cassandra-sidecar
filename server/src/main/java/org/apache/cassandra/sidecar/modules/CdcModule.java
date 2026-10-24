@@ -36,6 +36,8 @@ import jakarta.ws.rs.DELETE;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
+import org.apache.cassandra.bridge.CassandraBridge;
+import org.apache.cassandra.bridge.CdcBridgeFactory;
 import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
 import org.apache.cassandra.cdc.avro.CqlToAvroSchemaConverter;
@@ -157,10 +159,12 @@ public class CdcModule extends AbstractModule
     CassandraClusterSchemaMonitor cassandraClusterSchemaMonitorInstance(InstanceMetadataFetcher instanceMetadataFetcher,
                                                                         CdcDatabaseAccessor databaseAccessor,
                                                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
-                                                                        SidecarConfiguration configuration)
+                                                                        SidecarConfiguration configuration,
+                                                                        Provider<CassandraBridge> cassandraBridgeProvider)
     {
         return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor,
-                                                 driverUnsupportedSchemaCache, configuration);
+                                                 driverUnsupportedSchemaCache, configuration,
+                                                 cassandraBridgeProvider);
     }
 
     @ProvidesIntoMap
@@ -173,10 +177,9 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    CqlToAvroSchemaConverter cqlToAvroSchemaConverter(InstanceMetadataFetcher instanceMetadataFetcher)
+    CqlToAvroSchemaConverter cqlToAvroSchemaConverter(Provider<CassandraBridge> cassandraBridgeProvider)
     {
-
-        return new SidecarCqlToAvroSchemaConverter(instanceMetadataFetcher);
+        return new SidecarCqlToAvroSchemaConverter(cassandraBridgeProvider);
     }
 
     @Provides
@@ -185,6 +188,19 @@ public class CdcModule extends AbstractModule
                         CdcConfigAccessor cdcConfigAccessor)
     {
         return new CdcConfigImpl(vertx, cdcConfigAccessor);
+    }
+
+    /**
+     * The bridge for the Cassandra version the local instances run. Deliberately unscoped, and injected as a
+     * {@link Provider}, so that it is resolved on each use: the instances may be unreachable when Sidecar starts,
+     * and may be upgraded to another version while it runs.
+     */
+    @Provides
+    CassandraBridge cassandraBridge(InstanceMetadataFetcher instanceMetadataFetcher)
+    {
+        String releaseVersion = instanceMetadataFetcher.callOnFirstAvailableInstance(
+                instance -> instance.delegate().nodeSettings().releaseVersion());
+        return CdcBridgeFactory.get(releaseVersion);
     }
 
     @Provides
@@ -350,10 +366,11 @@ public class CdcModule extends AbstractModule
     @Provides
     @Singleton
     public SchemaSupplier schemaSupplier(InstanceMetadataFetcher instanceMetadataFetcher,
+                                         Provider<CassandraBridge> cassandraBridgeProvider,
                                          CdcDatabaseAccessor cdcDatabaseAccessor,
                                          SidecarConfiguration sidecarConfiguration)
     {
-        return new CdcSchemaSupplier(instanceMetadataFetcher, cdcDatabaseAccessor, sidecarConfiguration);
+        return new CdcSchemaSupplier(instanceMetadataFetcher, cassandraBridgeProvider, cdcDatabaseAccessor, sidecarConfiguration);
     }
 
     @Provides
@@ -453,6 +470,7 @@ public class CdcModule extends AbstractModule
                               CdcSystemViewsDatabaseAccessor systemViews,
                               SidecarCdcStats sidecarCdcStats,
                               RangeManager rangeManager,
+                              Provider<CassandraBridge> cassandraBridgeProvider,
                               Provider<SidecarCdcClient> sidecarCdcClientProvider,
                               CachingSchemaStore schemaStore,
                               KafkaProducerFactory kafkaProducerFactory,
@@ -469,6 +487,7 @@ public class CdcModule extends AbstractModule
                                 systemViews,
                                 sidecarCdcStats,
                                 () -> rangeManager,
+                                cassandraBridgeProvider,
                                 sidecarCdcClientProvider,
                                 schemaStore,
                                 kafkaProducerFactory,
@@ -477,9 +496,11 @@ public class CdcModule extends AbstractModule
 
     @Provides
     @Singleton
-    public CdcOptions cdcOptions(InstanceMetadataFetcher instanceMetadataFetcher, CdcConfig conf)
+    public CdcOptions cdcOptions(InstanceMetadataFetcher instanceMetadataFetcher,
+                                 CdcConfig conf,
+                                 Provider<CassandraBridge> cassandraBridgeProvider)
     {
-        return new SidecarCdcOptions(instanceMetadataFetcher, conf);
+        return new SidecarCdcOptions(instanceMetadataFetcher, conf, cassandraBridgeProvider);
     }
 
     @ProvidesIntoMap

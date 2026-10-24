@@ -32,6 +32,8 @@ import com.google.inject.Provider;
 import io.vertx.core.Future;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
+import org.apache.cassandra.bridge.CassandraBridge;
+import org.apache.cassandra.bridge.CassandraVersion;
 import org.apache.cassandra.cdc.api.CdcOptions;
 import org.apache.cassandra.cdc.api.EventConsumer;
 import org.apache.cassandra.cdc.api.SchemaSupplier;
@@ -101,6 +103,8 @@ public class CdcPublisherTests
     @Mock
     private Provider<RangeManager> rangeManager;
     @Mock
+    private Provider<CassandraBridge> cassandraBridgeProvider;
+    @Mock
     private SidecarCdcClient sidecarCdcClient;
     @Mock
     private CdcOptions cdcOptions;
@@ -135,6 +139,7 @@ public class CdcPublisherTests
             systemViews,
             sidecarCdcStats,
             rangeManager,
+            cassandraBridgeProvider,
             () -> sidecarCdcClient,
             schemaStore,
             kafkaProducerFactory,
@@ -188,7 +193,7 @@ public class CdcPublisherTests
         new CdcPublisher(
             vertx, executorPools, clusterConfigProvider, schemaSupplier, instanceMetadataFetcher,
             enabledConfig, databaseAccessor, cdcStats, systemViews, freshSidecarCdcStats, rangeManager,
-            () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
+            cassandraBridgeProvider, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
         );
 
         verify(freshSidecarCdcStats).captureCdcEnabled();
@@ -205,7 +210,7 @@ public class CdcPublisherTests
         new CdcPublisher(
             vertx, executorPools, clusterConfigProvider, schemaSupplier, instanceMetadataFetcher,
             disabledConfig, databaseAccessor, cdcStats, systemViews, freshSidecarCdcStats, rangeManager,
-            () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
+            cassandraBridgeProvider, () -> sidecarCdcClient, schemaStore, kafkaProducerFactory, cdcOptions
         );
 
         verify(freshSidecarCdcStats).captureCdcDisabled();
@@ -272,6 +277,10 @@ public class CdcPublisherTests
             Function<InstanceMetadata, Object> fn = invocation.getArgument(0);
             return fn.apply(mockInstance);
         }).when(instanceMetadataFetcher).callOnFirstAvailableInstance(any());
+
+        CassandraBridge mockBridge = mock(CassandraBridge.class);
+        when(mockBridge.getVersion()).thenReturn(CassandraVersion.FOURONE);
+        when(cassandraBridgeProvider.get()).thenReturn(mockBridge);
     }
 
 
