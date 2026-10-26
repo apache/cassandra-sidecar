@@ -202,6 +202,12 @@ class OperationalJobTest
             }
 
             @Override
+            public boolean releasesOnCompletion()
+            {
+                return false;
+            }
+
+            @Override
             public List<List<UUID>> nodeExecutionOrder()
             {
                 return nodeExecutionOrder;

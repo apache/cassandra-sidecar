@@ -115,8 +115,9 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
                     }
                 })
                 .onSuccess(v -> job.asyncResult().onComplete(ar -> {
-                    // The coordinator owns updating the terminal status of coordinated jobs
-                    if (!job.requiresCoordination())
+                    // The coordinator owns updating the terminal status of jobs that do not release
+                    // the active operation lock on completion
+                    if (job.releasesOnCompletion())
                     {
                         updateTerminalStatus(job);
                     }

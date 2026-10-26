@@ -458,7 +458,26 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
-    void testCoordinatedJobSkipsTerminalStatusUpdate() throws InterruptedException
+    void testCoordinatedJobThatDoesNotReleaseOnCompletionSkipsTerminalStatusUpdate() throws InterruptedException
+    {
+        UUID jobId = UUIDs.timeBased();
+        OperationalJob job = createCoordinatedOperationalJob(jobId, List.of(List.of(UUIDs.timeBased())));
+        CountDownLatch latch = new CountDownLatch(1);
+
+        tracker.computeIfAbsent(jobId, id -> job);
+        executorPool.executeBlocking(job::execute);
+
+        job.asyncResult().onComplete(ar -> latch.countDown());
+        assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+
+        loopAssert(2, () -> {
+            assertThat(tracker.jobsView()).doesNotContainKey(jobId);
+            verify(storageProvider, never()).updateJobStatus(eq(jobId), any(), eq(SUCCEEDED), any());
+        });
+    }
+
+    @Test
+    void testCoordinatedJobThatReleasesOnCompletionUpdatesTerminalStatus() throws InterruptedException
     {
         UUID jobId = UUIDs.timeBased();
         OperationalJob job = createCoordinatedOperationalJob(jobId, MillisecondBoundConfiguration.parse("50ms"));
@@ -471,8 +490,7 @@ class DurableOperationalJobTrackerTest
         assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
 
         loopAssert(2, () -> {
-            assertThat(tracker.jobsView()).doesNotContainKey(jobId);
-            verify(storageProvider, never()).updateJobStatus(any(), any(), any(), any());
+            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(SUCCEEDED), isNull());
         });
     }
 
