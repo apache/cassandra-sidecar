@@ -158,12 +158,12 @@ public class CdcModule extends AbstractModule
     @Singleton
     CassandraClusterSchemaMonitor cassandraClusterSchemaMonitorInstance(InstanceMetadataFetcher instanceMetadataFetcher,
                                                                         CdcDatabaseAccessor databaseAccessor,
-                                                                        DriverUnsupportedSchemaCache driverUnsupportedSchemaCache,
+                                                                        SchemaCache schemaCache,
                                                                         SidecarConfiguration configuration,
                                                                         Provider<CassandraBridge> cassandraBridgeProvider)
     {
         return new CassandraClusterSchemaMonitor(instanceMetadataFetcher, databaseAccessor,
-                                                 driverUnsupportedSchemaCache, configuration,
+                                                 schemaCache, configuration,
                                                  cassandraBridgeProvider);
     }
 
