@@ -42,6 +42,7 @@ import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.job.storage.OperationalJobRecord;
 import org.apache.cassandra.sidecar.job.storage.StorageProvider;
 import org.apache.cassandra.sidecar.job.storage.StorageProviderException;
+import org.mockito.InOrder;
 
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.CREATED;
 import static org.apache.cassandra.sidecar.common.data.OperationalJobStatus.FAILED;
@@ -58,6 +59,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -513,7 +515,7 @@ class DurableOperationalJobTrackerTest
     }
 
     @Test
-    void testCoordinatedJobSeedsNodeStatusesAndMarksRunningOnCreate()
+    void testCoordinatedJobSeedsNodeStatusesBeforePersistingRunningRecord()
     {
         UUID jobId = UUIDs.timeBased();
         UUID node1 = UUIDs.timeBased();
@@ -524,10 +526,12 @@ class DurableOperationalJobTrackerTest
 
         tracker.computeIfAbsent(jobId, id -> job);
 
-        loopAssert(2, () -> {
-            verify(storageProvider).updateNodeStatuses(jobId, List.of(node1, node2, node3), CREATED);
-            verify(storageProvider).updateJobStatus(eq(jobId), eq(OperationType.DRAIN), eq(RUNNING), isNull());
-        });
+        loopAssert(2, () -> verify(storageProvider).persistJob(any()));
+        InOrder inOrder = inOrder(storageProvider);
+        inOrder.verify(storageProvider).updateNodeStatuses(jobId, List.of(node1, node2, node3), CREATED);
+        inOrder.verify(storageProvider).persistJob(argThat(record -> record.status() == RUNNING
+                                                                     && record.startTime() != null));
+        verify(storageProvider, never()).updateJobStatus(any(), any(), any(), any());
     }
 
     @Test

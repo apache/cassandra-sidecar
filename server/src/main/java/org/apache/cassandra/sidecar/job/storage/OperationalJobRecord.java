@@ -230,10 +230,17 @@ public class OperationalJobRecord implements OperationalJobInfo
      */
     public static OperationalJobRecord fromOperationalJob(OperationalJob job)
     {
+        return fromOperationalJob(job, job.status(), job.startTime());
+    }
+
+    public static OperationalJobRecord fromOperationalJob(OperationalJob job,
+                                                          OperationalJobStatus status,
+                                                          @Nullable Instant startTime)
+    {
         return builder().jobId(job.jobId())
                         .operationType(job.operationType())
-                        .status(job.status())
-                        .startTime(job.startTime())
+                        .status(status)
+                        .startTime(startTime)
                         .lastUpdate(Instant.now())
                         .failureReason(job.failureReason())
                         .nodeExecutionOrder(job.nodeExecutionOrder())

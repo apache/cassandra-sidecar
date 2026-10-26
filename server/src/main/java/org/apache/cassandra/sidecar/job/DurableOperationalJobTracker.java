@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -105,13 +106,16 @@ public class DurableOperationalJobTracker implements OperationalJobTracker
     private void persistInitialRecord(OperationalJob job, boolean activatingCoordinatedJob, int attempt)
     {
         executor.runBlocking(() -> {
-                    storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
                     if (activatingCoordinatedJob)
                     {
                         seedNodeStatuses(job);
                         // Currently only support job submission that executes immediately
-                        storageProvider.updateJobStatus(job.jobId(), job.operationType(),
-                                                        OperationalJobStatus.RUNNING, null);
+                        storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job, OperationalJobStatus.RUNNING,
+                                                                                           Instant.now()));
+                    }
+                    else
+                    {
+                        storageProvider.persistJob(OperationalJobRecord.fromOperationalJob(job));
                     }
                 })
                 .onSuccess(v -> job.asyncResult().onComplete(ar -> {
