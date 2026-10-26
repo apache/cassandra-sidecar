@@ -41,7 +41,7 @@ import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.CdcDatabaseAccessor;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.utils.CdcUtil;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.spark.data.CqlTable;
@@ -72,7 +72,7 @@ class CassandraClusterSchemaMonitorTest
     private CassandraClusterSchemaMonitor clusterSchema;
     private InstanceMetadataFetcher mockInstanceFetcher;
     private CdcDatabaseAccessor mockDatabaseAccessor;
-    private DriverUnsupportedSchemaCache mockDriverUnsupportedSchemaCache;
+    private SchemaCache mockSchemaCache;
     private SidecarConfiguration mockSidecarConfiguration;
     private ServiceConfiguration mockServiceConfiguration;
     private CdcConfiguration mockCdcConfiguration;
@@ -102,7 +102,7 @@ class CassandraClusterSchemaMonitorTest
     {
         mockInstanceFetcher = mock(InstanceMetadataFetcher.class);
         mockDatabaseAccessor = mock(CdcDatabaseAccessor.class);
-        mockDriverUnsupportedSchemaCache = mock(DriverUnsupportedSchemaCache.class);
+        mockSchemaCache = mock(SchemaCache.class);
         mockSidecarConfiguration = mock(SidecarConfiguration.class);
         mockServiceConfiguration = mock(ServiceConfiguration.class);
         mockCdcConfiguration = mock(CdcConfiguration.class);
@@ -131,7 +131,7 @@ class CassandraClusterSchemaMonitorTest
 
         // Setup database accessor
         when(mockDatabaseAccessor.fullSchema()).thenReturn(INITIAL_SCHEMA);
-        when(mockDriverUnsupportedSchemaCache.getFullSchema()).thenReturn("");
+        when(mockSchemaCache.getUnsupportedTableSchema()).thenReturn("");
         when(mockDatabaseAccessor.partitioner()).thenReturn(Partitioner.Murmur3Partitioner);
         when(mockDatabaseAccessor.getTableId(any(TableIdentifier.class))).thenReturn(UUID.randomUUID());
         mockCdcBridgeFactory.when(() -> CdcBridgeFactory.getCdcBridge(any(CassandraBridge.class))).thenReturn(mockCdcBridge);
@@ -139,7 +139,7 @@ class CassandraClusterSchemaMonitorTest
         clusterSchema = new CassandraClusterSchemaMonitor(
         mockInstanceFetcher,
         mockDatabaseAccessor,
-        mockDriverUnsupportedSchemaCache,
+        mockSchemaCache,
         mockSidecarConfiguration,
         () -> mockCassandraBridge
         );
@@ -238,7 +238,6 @@ class CassandraClusterSchemaMonitorTest
 
             // Verify initial schema processing
             verify(mockDatabaseAccessor, times(1)).fullSchema();
-            verify(mockDriverUnsupportedSchemaCache, times(1)).getFullSchema();
             verify(mockCdcBridge, times(1)).updateCdcSchema(tablesCaptor.capture(), eq(Partitioner.Murmur3Partitioner), any());
             assertThat(tablesCaptor.getValue()).hasSize(1);
 
@@ -247,7 +246,6 @@ class CassandraClusterSchemaMonitorTest
 
             // Verify schema change detection and update
             verify(mockDatabaseAccessor, times(2)).fullSchema();
-            verify(mockDriverUnsupportedSchemaCache, times(2)).getFullSchema();
             verify(mockCdcBridge, times(2)).updateCdcSchema(tablesCaptor.capture(), eq(Partitioner.Murmur3Partitioner), any());
             assertThat(tablesCaptor.getValue()).hasSize(2);
         }
@@ -322,7 +320,7 @@ class CassandraClusterSchemaMonitorTest
             // Same table set every refresh — nothing ever becomes stale.
             when(mockDatabaseAccessor.fullSchema())
             .thenReturn(INITIAL_SCHEMA)
-            .thenReturn(INITIAL_SCHEMA + " ");  // trailing space forces a "schema changed" refresh without changing the table set
+            .thenReturn(INITIAL_SCHEMA + " -- changed");  // forces a "schema changed" refresh without changing the table set
 
             clusterSchema.refresh();
             clusterSchema.refresh();
@@ -346,10 +344,9 @@ class CassandraClusterSchemaMonitorTest
             String updatedCdcTableStmt = "CREATE TABLE test.cdc_table (id text PRIMARY KEY, data text) WITH cdc = true;";
             String updatedMismatchedSchema = updatedCdcTableStmt + nonCdcTableStmt;
             // Third refresh: schema "changes" again but the table set is identical — appending
-            // a non-whitespace comment-like suffix (whitespace alone would be stripped by
-            // DriverUnsupportedSchemaCache.concatSchemas()'s trim(), never triggering a
-            // "schema changed" refresh at all) is enough to force refresh() to re-run its
-            // schema-changed branch and retry unregistration.
+            // a non-whitespace comment-like suffix (whitespace alone is trimmed when SchemaCache
+            // assembles the full schema, never triggering a "schema changed" refresh at all) is
+            // enough to force refresh() to re-run its schema-changed branch and retry unregistration.
             String thirdRefreshSchema = updatedMismatchedSchema + " -- refresh3";
 
             Map<TableIdentifier, CdcUtil.TableSchema> initialTables = Map.of(
@@ -474,7 +471,7 @@ class CassandraClusterSchemaMonitorTest
     void testRefreshHandlesGenericExceptionGracefully()
     {
 
-        when(mockDatabaseAccessor.fullSchema()).thenThrow(new RuntimeException("Unexpected error"));
+        when(mockDatabaseAccessor.fullSchema()).thenThrow(new IllegalStateException("Unexpected error"));
 
         // Should now throw the exception instead of handling it gracefully
         try
