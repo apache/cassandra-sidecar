@@ -335,7 +335,7 @@ class DurableOperationalJobTrackerTest
         OperationalJob result = tracker.computeIfAbsent(job.jobId(), id -> job);
 
         assertThat(result).isSameAs(job);
-        loopAssert(2, () -> verify(storageProvider).persistJob(any()));
+        loopAssert(2, () -> verify(storageProvider, times(3)).persistJob(any()));
         assertThat(tracker.jobsView()).containsKey(job.jobId());
     }
 
