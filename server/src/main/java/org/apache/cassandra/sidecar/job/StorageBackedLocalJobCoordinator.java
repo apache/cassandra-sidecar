@@ -109,10 +109,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
     {
         EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_CASSANDRA_CQL_READY.address(),
-                                        ignored -> {
-                                            storageProvider.initialize();
-                                            executor.schedule(this);
-                                        });
+                                        ignored -> executor.schedule(this));
     }
 
     @Override

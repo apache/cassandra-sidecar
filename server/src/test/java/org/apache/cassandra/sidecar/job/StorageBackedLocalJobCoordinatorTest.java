@@ -38,6 +38,7 @@ import com.datastax.driver.core.utils.UUIDs;
 import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
+import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.TestResourceReaper;
 import org.apache.cassandra.sidecar.cluster.CassandraAdapterDelegate;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -52,13 +53,17 @@ import org.apache.cassandra.sidecar.config.yaml.OperationalJobConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.ServiceConfigurationImpl;
 import org.apache.cassandra.sidecar.job.storage.OperationalJobRecord;
 import org.apache.cassandra.sidecar.job.storage.StorageProvider;
+import org.apache.cassandra.sidecar.job.storage.StorageProviderException;
+import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
 
+import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -667,6 +672,20 @@ class StorageBackedLocalJobCoordinatorTest
                                                                             .build();
         buildCoordinator(config);
         assertThat(coordinator.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+    }
+
+    @Test
+    void testDeploySchedulesEvenWhenStorageInitializationFails()
+    {
+        buildCoordinator();
+        doThrow(new StorageProviderException("Failed to initialize storage provider"))
+        .when(storageProvider).initialize();
+        PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
+
+        coordinator.deploy(vertx, executor);
+        vertx.eventBus().publish(ON_CASSANDRA_CQL_READY.address(), new JsonObject());
+
+        verify(executor, timeout(5000)).schedule(coordinator);
     }
 
     @Test
