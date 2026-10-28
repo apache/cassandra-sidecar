@@ -141,6 +141,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         {
             if (!storageProvider.isAvailable())
             {
+                LOGGER.warn("Storage provider unavailable - skipping local job coordination poll");
                 promise.complete();
                 return;
             }
