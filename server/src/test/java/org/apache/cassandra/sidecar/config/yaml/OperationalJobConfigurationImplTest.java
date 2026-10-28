@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,7 +49,27 @@ class OperationalJobConfigurationImplTest
                                                                 .tablesTtl(SecondBoundConfiguration.parse("13d"))
                                                                 .build())
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("tablesTtl cannot be less than");
+        .hasMessageContaining("tables_ttl cannot be less than");
+    }
+
+    @Test
+    void testZeroLocalJobCoordinationDelayThrows()
+    {
+        assertThatThrownBy(() -> OperationalJobConfigurationImpl.builder()
+                                                                .localJobCoordinationDelay(SecondBoundConfiguration.parse("0s"))
+                                                                .build())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("local_job_coordination_delay must be greater than 0");
+    }
+
+    @Test
+    void testZeroNodeExecutionTimeoutThrows()
+    {
+        assertThatThrownBy(() -> OperationalJobConfigurationImpl.builder()
+                                                                .nodeExecutionTimeout(SecondBoundConfiguration.parse("0s"))
+                                                                .build())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("node_execution_timeout must be greater than 0");
     }
 
     @Test
