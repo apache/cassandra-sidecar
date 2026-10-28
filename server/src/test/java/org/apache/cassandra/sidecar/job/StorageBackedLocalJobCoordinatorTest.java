@@ -63,6 +63,7 @@ import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSAND
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -665,19 +666,30 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
-    void testScheduleDecisionSkipsWhenDisabled()
+    void testScheduleDecisionSkipsWhenStorageUnavailable()
     {
-        OperationalJobConfiguration config = OperationalJobConfigurationImpl.builder()
-                                                                            .coordinationEnabled(false)
-                                                                            .build();
-        buildCoordinator(config);
+        buildCoordinator();
+        when(storageProvider.isAvailable()).thenReturn(false);
+
         assertThat(coordinator.scheduleDecision()).isEqualTo(ScheduleDecision.SKIP);
+    }
+
+    @Test
+    void testDeployDoesNotScheduleWhenCoordinationDisabled()
+    {
+        buildCoordinator(OperationalJobConfigurationImpl.builder().coordinationEnabled(false).build());
+        PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);
+
+        coordinator.deploy(vertx, executor);
+        vertx.eventBus().publish(ON_CASSANDRA_CQL_READY.address(), new JsonObject());
+
+        verify(executor, after(500).never()).schedule(any());
     }
 
     @Test
     void testDeploySchedulesEvenWhenStorageInitializationFails()
     {
-        buildCoordinator();
+        buildCoordinator(OperationalJobConfigurationImpl.builder().coordinationEnabled(true).build());
         doThrow(new StorageProviderException("Failed to initialize storage provider"))
         .when(storageProvider).initialize();
         PeriodicTaskExecutor executor = mock(PeriodicTaskExecutor.class);

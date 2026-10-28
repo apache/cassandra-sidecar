@@ -20,7 +20,6 @@ package org.apache.cassandra.sidecar.config.yaml;
 
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;

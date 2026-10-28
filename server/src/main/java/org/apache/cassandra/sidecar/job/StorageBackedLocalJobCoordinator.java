@@ -108,6 +108,11 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     @Override
     public void deploy(Vertx vertx, PeriodicTaskExecutor executor)
     {
+        if (!config.coordinationEnabled())
+        {
+            LOGGER.info("Operational job coordination is disabled. Skiping deployment of StorageBackedLocalJobCoordinator.");
+            return;
+        }
         EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_CASSANDRA_CQL_READY.address(),
                                         ignored -> executor.schedule(this));
     }
@@ -127,10 +132,6 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     @Override
     public ScheduleDecision scheduleDecision()
     {
-        if (!config.coordinationEnabled())
-        {
-            return ScheduleDecision.SKIP;
-        }
         return storageProvider.isAvailable() ? ScheduleDecision.EXECUTE : ScheduleDecision.SKIP;
     }
 
