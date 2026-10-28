@@ -36,7 +36,7 @@ public interface OperationalJobConfiguration
     boolean coordinationEnabled();
 
     /**
-     * @return whether durable operational job tacking is enabled
+     * @return whether durable operational job tracking is enabled
      */
     boolean durableTrackingEnabled();
 

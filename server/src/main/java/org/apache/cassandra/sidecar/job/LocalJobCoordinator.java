@@ -47,7 +47,7 @@ public interface LocalJobCoordinator
                                     boolean requiresPredecessorSuccess);
 
     /**
-     * Reports the node's status 
+     * Reports the node's status.
      *
      * @param operationId the operation this node belongs to
      * @param nodeId      the node whose status is being reported
@@ -56,7 +56,7 @@ public interface LocalJobCoordinator
     void reportNodeStatus(UUID operationId, UUID nodeId, OperationalJobStatus status);
 
     /**
-     * Checks if the entire job is complete and finalizes if it is
+     * Checks if the entire job is complete and finalizes if it is.
      *
      * @param operationId   the operation identifier
      * @param operationType the type of operation
