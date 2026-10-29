@@ -316,6 +316,21 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testCreateJobFailureMarksNodeFailedAndContinuesToOtherInstances()
+    {
+        localJobFactory = failingFactoryFor(NODE_1);
+        buildCoordinator();
+        setupMultipleNodeInstances(new UUID[]{ NODE_1, NODE_2 }, new String[]{ "127.0.0.1", "127.0.0.2" });
+        stubActiveOperation(createJobRecord(group(NODE_1, NODE_2)), new HashMap<>());
+
+        executeAndWait();
+
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        verify(storageProvider, never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.RUNNING);
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_2, OperationalJobStatus.RUNNING);
+    }
+
+    @Test
     void testArePredecessorsCompleteBlocksWhenRequiresPredecessorSuccessTrue()
     {
         buildCoordinator();
@@ -608,6 +623,20 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testCrashRecoveryCannotRecoverContinuesToOtherInstancesWhenCreateJobFails()
+    {
+        localJobFactory = failingFactoryFor(NODE_1);
+        buildCoordinator();
+        setupMultipleNodeInstances(new UUID[]{ NODE_1, NODE_2 }, new String[]{ "127.0.0.1", "127.0.0.2" });
+        stubActiveOperation(createJobRecord(group(NODE_1, NODE_2)), statuses(NODE_1, OperationalJobStatus.RUNNING));
+
+        executeAndWait();
+
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_2, OperationalJobStatus.RUNNING);
+    }
+
+    @Test
     void testCreatedNodeIsSubmitted()
     {
         buildCoordinator();
@@ -807,6 +836,17 @@ class StorageBackedLocalJobCoordinatorTest
         {
             return waitBetweenExecutionGroups;
         }
+    }
+
+    private static LocalJobFactory failingFactoryFor(UUID failingNodeId)
+    {
+        return (opId, nodeId, host, opType) -> {
+            if (nodeId.equals(failingNodeId))
+            {
+                throw new IllegalStateException("Cannot create job for node " + nodeId);
+            }
+            return new TestLocalJobFactory().createJob(opId, nodeId, host, opType);
+        };
     }
 
     private static List<UUID> group(UUID... nodeIds)

@@ -51,6 +51,7 @@ import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.EventBusUtils;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
+import org.jetbrains.annotations.Nullable;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 
@@ -325,15 +326,23 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             LOGGER.warn("Node {} cannot recover from RUNNING state — marking as FAILED. operationId={}",
                          hostId, operationId);
             reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
-            LocalJob job = localJobFactory.createJob(operationId, hostId, host, operationType, operationMetadata);
-            recoverFailedNode(job, operationId, hostId);
+            LocalJob job = tryCreateJob(operationId, operationType, hostId, host, operationMetadata);
+            if (job != null)
+            {
+                recoverFailedNode(job, operationId, hostId);
+            }
         }
     }
 
     private void submitLocalJob(UUID operationId, OperationType operationType, UUID hostId, String host,
                                 Map<String, String> operationMetadata)
     {
-        LocalJob localJob = localJobFactory.createJob(operationId, hostId, host, operationType, operationMetadata);
+        LocalJob localJob = tryCreateJob(operationId, operationType, hostId, host, operationMetadata);
+        if (localJob == null)
+        {
+            reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
+            return;
+        }
         reportNonTerminalNodeStatus(operationId, hostId, OperationalJobStatus.RUNNING);
 
         // Bound every RUNNING node so a hanging job can't stall the operation. Whichever of execution completes or
@@ -371,6 +380,21 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                 recoverFailedNode(localJob, operationId, hostId);
             }
         }));
+    }
+
+    @Nullable
+    private LocalJob tryCreateJob(UUID operationId, OperationType operationType, UUID hostId, String host,
+                                  Map<String, String> operationMetadata)
+    {
+        try
+        {
+            return localJobFactory.createJob(operationId, hostId, host, operationType, operationMetadata);
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to create local job for node {}. operationId={}", hostId, operationId, e);
+            return null;
+        }
     }
 
     /**
