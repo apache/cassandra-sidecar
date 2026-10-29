@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.modules;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
@@ -38,6 +40,9 @@ import org.apache.cassandra.sidecar.common.response.StreamStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.v2.V2NodeSettings;
+import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.ServiceConfiguration;
+import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
 import org.apache.cassandra.sidecar.handlers.CompactionStatsHandler;
 import org.apache.cassandra.sidecar.handlers.CompactionStopHandler;
@@ -62,14 +67,24 @@ import org.apache.cassandra.sidecar.handlers.cassandra.NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.v2.cassandra.V2NodeSettingsHandler;
 import org.apache.cassandra.sidecar.handlers.validations.ValidateTableExistenceHandler;
 import org.apache.cassandra.sidecar.job.DisabledOperationalJobCoordinator;
+import org.apache.cassandra.sidecar.job.DurableOperationalJobTracker;
 import org.apache.cassandra.sidecar.job.InMemoryOperationalJobTracker;
+import org.apache.cassandra.sidecar.job.LocalJobFactory;
+import org.apache.cassandra.sidecar.job.LocalJobManager;
 import org.apache.cassandra.sidecar.job.OperationalJobCoordinator;
 import org.apache.cassandra.sidecar.job.OperationalJobTracker;
+import org.apache.cassandra.sidecar.job.StorageBackedLocalJobCoordinator;
+import org.apache.cassandra.sidecar.job.StorageBackedOperationalJobCoordinator;
+import org.apache.cassandra.sidecar.job.storage.StorageProvider;
 import org.apache.cassandra.sidecar.modules.multibindings.KeyClassMapKey;
+import org.apache.cassandra.sidecar.modules.multibindings.PeriodicTaskMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.TableSchemaMapKeys;
 import org.apache.cassandra.sidecar.modules.multibindings.VertxRouteMapKeys;
 import org.apache.cassandra.sidecar.routes.RouteBuilder;
 import org.apache.cassandra.sidecar.routes.VertxRoute;
+import org.apache.cassandra.sidecar.tasks.PeriodicTask;
+import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
+import org.apache.cassandra.sidecar.utils.TimeProvider;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
@@ -84,8 +99,64 @@ public class CassandraOperationsModule extends AbstractModule
     @Override
     protected void configure()
     {
-        bind(OperationalJobTracker.class).to(InMemoryOperationalJobTracker.class);
-        bind(OperationalJobCoordinator.class).to(DisabledOperationalJobCoordinator.class);
+        bind(LocalJobManager.class).in(Singleton.class);
+        bind(LocalJobFactory.class).toInstance((operationId, nodeId, instanceHost, operationType) -> {
+            throw new UnsupportedOperationException("No LocalJob implementation for " + operationType);
+        });
+    }
+
+    /**
+     * Provides the operational job coordinator
+     */
+    @Provides
+    @Singleton
+    OperationalJobCoordinator operationalJobCoordinator(SidecarConfiguration sidecarConfiguration,
+                                                        StorageProvider storageProvider)
+    {
+        if (sidecarConfiguration.operationalJobConfiguration().coordinationEnabled())
+        {
+            return new StorageBackedOperationalJobCoordinator(storageProvider);
+        }
+        return new DisabledOperationalJobCoordinator();
+    }
+
+    /**
+     * Provides the operational job tracker
+     */
+    @Provides
+    @Singleton
+    OperationalJobTracker operationalJobTracker(SidecarConfiguration sidecarConfiguration,
+                                                ServiceConfiguration serviceConfiguration,
+                                                StorageProvider storageProvider,
+                                                ExecutorPools executorPools)
+    {
+        if (sidecarConfiguration.operationalJobConfiguration().durableTrackingEnabled())
+        {
+            return new DurableOperationalJobTracker(serviceConfiguration, storageProvider, executorPools.service());
+        }
+        return new InMemoryOperationalJobTracker(serviceConfiguration);
+    }
+
+    @Singleton
+    @ProvidesIntoMap
+    @KeyClassMapKey(PeriodicTaskMapKeys.StorageBackedLocalJobCoordinatorKey.class)
+    PeriodicTask storageBackedLocalJobCoordinator(ExecutorPools executorPools,
+                                                  OperationalJobCoordinator operationalJobCoordinator,
+                                                  StorageProvider storageProvider,
+                                                  InstanceMetadataFetcher instanceMetadataFetcher,
+                                                  LocalJobManager localJobManager,
+                                                  SidecarConfiguration configuration,
+                                                  LocalJobFactory localJobFactory,
+                                                  TimeProvider timeProvider)
+    {
+        return new StorageBackedLocalJobCoordinator(executorPools,
+                                                    operationalJobCoordinator,
+                                                    storageProvider,
+                                                    instanceMetadataFetcher,
+                                                    localJobManager,
+                                                    configuration,
+                                                    localJobFactory,
+                                                    timeProvider);
     }
 
     @ProvidesIntoMap

@@ -464,6 +464,19 @@ blob_restore:
   # to prevent clients from supplying long-lived static credentials. By default, both are allowed.
   allowed_credential_types: [STATIC, IAM]
 
+operational_job:
+  # TTL applied to the operational job tracking tables (cluster_ops, cluster_ops_node_state, active_cluster_ops)
+  tables_ttl: 90d
+  # Enables the operational job coordinator and the local coordinator periodic task that drives
+  # local node job execution
+  coordination_enabled: false
+  # Polling interval for the local coordinator
+  local_job_coordination_delay: 3m
+  # Max time a node's local job will execute before marked as failed
+  node_execution_timeout: 10m
+  # Uses the durable job tracker when true, otherwise the in-memory tracker
+  durable_tracking_enabled: false
+
 s3_client:
   concurrency: 4
   thread_name_prefix: s3-client
