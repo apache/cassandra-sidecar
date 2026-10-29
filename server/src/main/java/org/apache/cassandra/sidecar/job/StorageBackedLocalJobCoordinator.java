@@ -110,7 +110,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     {
         if (!config.coordinationEnabled())
         {
-            LOGGER.info("Operational job coordination is disabled. Skiping deployment of StorageBackedLocalJobCoordinator.");
+            LOGGER.info("Operational job coordination is disabled. Skipping deployment of StorageBackedLocalJobCoordinator.");
             return;
         }
         EventBusUtils.onceLocalConsumer(vertx.eventBus(), ON_CASSANDRA_CQL_READY.address(),
