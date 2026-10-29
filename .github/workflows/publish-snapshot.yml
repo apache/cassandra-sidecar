@@ -1,0 +1,67 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+# Publishes a SNAPSHOT build to the ASF Nexus snapshot repository after every
+# trunk commit that passes CI.
+name: Publish Snapshot
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [trunk]
+  workflow_dispatch:
+
+# If several commits land in quick succession, cancel a stale in-progress
+# publish in favor of the latest.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish snapshot
+    runs-on: ubuntu-latest
+    # Only publish after a successful build of a push to trunk (never a PR, and
+    # never a fork's CI run, which would otherwise have access to our secrets).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Setup Java 11
+        uses: actions/setup-java@v5
+        with:
+          java-version: "11"
+          distribution: "temurin"
+          cache: "gradle"
+
+      - name: Publish snapshot artifacts
+        env:
+          MAVEN_USERNAME: ${{ secrets.NEXUS_USER }}
+          MAVEN_PASSWORD: ${{ secrets.NEXUS_PW }}
+        run: ./scripts/publish-snapshot.sh
