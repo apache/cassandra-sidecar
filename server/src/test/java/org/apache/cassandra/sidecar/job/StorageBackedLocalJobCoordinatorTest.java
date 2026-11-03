@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -58,6 +59,7 @@ import org.apache.cassandra.sidecar.tasks.PeriodicTaskExecutor;
 import org.apache.cassandra.sidecar.tasks.ScheduleDecision;
 import org.apache.cassandra.sidecar.utils.InstanceMetadataFetcher;
 import org.apache.cassandra.sidecar.utils.TimeProvider;
+import org.mockito.InOrder;
 
 import static org.apache.cassandra.sidecar.server.SidecarServerEvents.ON_CASSANDRA_CQL_READY;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -65,6 +67,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.after;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
@@ -695,6 +698,33 @@ class StorageBackedLocalJobCoordinatorTest
 
         verify(storageProvider).updateNodeStatus(drainOperationId, NODE_1, OperationalJobStatus.RUNNING);
         verify(storageProvider).updateNodeStatus(repairOperationId, NODE_2, OperationalJobStatus.RUNNING);
+    }
+
+    @Test
+    void testStorageErrorOnOneOperationDoesNotSkipOtherOperations()
+    {
+        buildCoordinator();
+
+        UUID repairOperationId = UUIDs.timeBased();
+        OperationalJobRecord drainJob = createJobRecord(group(NODE_1));
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+
+        Map<OperationType, UUID> activeOps = new LinkedHashMap<>();
+        activeOps.put(OperationType.REPAIR, repairOperationId);
+        activeOps.put(OperationType.DRAIN, OPERATION_ID);
+
+        when(storageProvider.isAvailable()).thenReturn(true);
+        when(operationalJobCoordinator.getActiveOperations()).thenReturn(activeOps);
+        when(storageProvider.findJob(repairOperationId)).thenThrow(new StorageProviderException("Read timed out"));
+        when(storageProvider.findJob(OPERATION_ID)).thenReturn(drainJob);
+        when(storageProvider.getNodeStatusesForOperation(OPERATION_ID)).thenReturn(new HashMap<>());
+
+        executeAndWait();
+
+        InOrder inOrder = inOrder(storageProvider);
+        inOrder.verify(storageProvider).findJob(repairOperationId);
+        inOrder.verify(storageProvider).findJob(OPERATION_ID);
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.RUNNING);
     }
 
     @Test

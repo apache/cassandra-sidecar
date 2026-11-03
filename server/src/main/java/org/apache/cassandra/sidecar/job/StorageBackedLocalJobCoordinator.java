@@ -158,29 +158,15 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
 
             for (Map.Entry<OperationType, UUID> entry : activeOps.entrySet())
             {
-                OperationType operationType = entry.getKey();
-                UUID operationId = entry.getValue();
-
-                OperationalJobRecord jobRecord = storageProvider.findJob(operationId);
-                if (jobRecord == null)
+                try
                 {
-                    continue;
+                    coordinateOperation(entry.getKey(), entry.getValue());
                 }
-
-                List<List<UUID>> nodeExecutionOrder = jobRecord.nodeExecutionOrder();
-                if (nodeExecutionOrder == null || nodeExecutionOrder.isEmpty())
+                catch (Exception e)
                 {
-                    continue;
+                    LOGGER.error("Error coordinating local jobs for operation. operationType={} operationId={}",
+                                 entry.getKey(), entry.getValue(), e);
                 }
-
-                // nodeStatuses is a snapshot from storage. Local mutations, such as during crash recovery,
-                // may make it partially stale, but this approach is conservative. Finalization requires all
-                // nodes to be terminal, so stale CREATED entries can only delay finalization.
-                Map<UUID, OperationalJobStatus> nodeStatuses = storageProvider.getNodeStatusesForOperation(operationId);
-
-                trySubmitJobsForLocalInstances(operationId, operationType, jobRecord, nodeExecutionOrder, nodeStatuses);
-
-                checkAndFinalizeJobIfComplete(operationId, operationType, jobRecord, nodeStatuses);
             }
 
             promise.complete();
@@ -190,6 +176,30 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             LOGGER.error("Error during local job coordination poll", e);
             promise.complete();
         }
+    }
+
+    private void coordinateOperation(OperationType operationType, UUID operationId)
+    {
+        OperationalJobRecord jobRecord = storageProvider.findJob(operationId);
+        if (jobRecord == null)
+        {
+            return;
+        }
+
+        List<List<UUID>> nodeExecutionOrder = jobRecord.nodeExecutionOrder();
+        if (nodeExecutionOrder == null || nodeExecutionOrder.isEmpty())
+        {
+            return;
+        }
+
+        // nodeStatuses is a snapshot from storage. Local mutations, such as during crash recovery,
+        // may make it partially stale, but this approach is conservative. Finalization requires all
+        // nodes to be terminal, so stale CREATED entries can only delay finalization.
+        Map<UUID, OperationalJobStatus> nodeStatuses = storageProvider.getNodeStatusesForOperation(operationId);
+
+        trySubmitJobsForLocalInstances(operationId, operationType, jobRecord, nodeExecutionOrder, nodeStatuses);
+
+        checkAndFinalizeJobIfComplete(operationId, operationType, jobRecord, nodeStatuses);
     }
 
     private void trySubmitJobsForLocalInstances(UUID operationId,
