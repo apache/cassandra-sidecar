@@ -18,6 +18,12 @@
 
 package org.apache.cassandra.sidecar.modules;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
@@ -41,6 +47,8 @@ import org.apache.cassandra.sidecar.common.response.TableStatsResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.response.v2.V2NodeSettings;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.OperationalJobConfiguration;
+import org.apache.cassandra.sidecar.config.SchemaKeyspaceConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.config.SidecarConfiguration;
 import org.apache.cassandra.sidecar.db.schema.TableSchema;
@@ -89,6 +97,7 @@ import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.openapi.annotations.media.Content;
 import org.eclipse.microprofile.openapi.annotations.media.Schema;
 import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Provides the capability to query and invoke Cassandra operations
@@ -96,13 +105,69 @@ import org.eclipse.microprofile.openapi.annotations.responses.APIResponse;
 @Path("/")
 public class CassandraOperationsModule extends AbstractModule
 {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CassandraOperationsModule.class);
+    private static final int MIN_RECOMMENDED_REPLICATION_FACTOR = 3;
+
+    @Nullable
+    private final SidecarConfiguration configuration;
+
+    public CassandraOperationsModule(@Nullable SidecarConfiguration configuration)
+    {
+        this.configuration = configuration;
+    }
+
     @Override
     protected void configure()
     {
+        if (configuration != null)
+        {
+            SchemaKeyspaceConfiguration schemaConfiguration = configuration.serviceConfiguration()
+                                                                           .schemaKeyspaceConfiguration();
+            validateOperationalJobConfiguration(configuration.operationalJobConfiguration(),
+                                                schemaConfiguration.isEnabled());
+            warnIfLowReplicationFactor(configuration.operationalJobConfiguration(), schemaConfiguration);
+        }
         bind(LocalJobManager.class).in(Singleton.class);
         bind(LocalJobFactory.class).toInstance((operationId, nodeId, instanceHost, operationType) -> {
             throw new UnsupportedOperationException("No LocalJob implementation for " + operationType);
         });
+    }
+
+    static void validateOperationalJobConfiguration(OperationalJobConfiguration config, boolean schemaEnabled)
+    {
+        if (schemaEnabled)
+        {
+            return;
+        }
+
+        List<String> requiresSchema = new ArrayList<>();
+        if (config.durableTrackingEnabled())
+        {
+            requiresSchema.add("durable_tracking_enabled");
+        }
+        if (config.coordinationEnabled())
+        {
+            requiresSchema.add("coordination_enabled");
+        }
+        if (!requiresSchema.isEmpty())
+        {
+            throw new IllegalArgumentException(
+            "Invalid operational_job configuration: the following features persist to the Sidecar schema and "
+            + "require sidecar.schema.is_enabled to be true: " + requiresSchema);
+        }
+    }
+
+    private static void warnIfLowReplicationFactor(OperationalJobConfiguration config,
+                                                   SchemaKeyspaceConfiguration schemaConfiguration)
+    {
+        if (config.coordinationEnabled() && schemaConfiguration.replicationFactor() < MIN_RECOMMENDED_REPLICATION_FACTOR)
+        {
+            LOGGER.warn("Operational job coordination is enabled, but the Sidecar schema keyspace {} has a replication "
+                        + "factor of {}. Coordination state is unavailable while any of its replicas is down. A "
+                        + "replication factor of at least {} is recommended.",
+                        schemaConfiguration.keyspace(), schemaConfiguration.replicationFactor(),
+                        MIN_RECOMMENDED_REPLICATION_FACTOR);
+        }
     }
 
     /**
