@@ -343,7 +343,10 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
             return;
         }
-        reportNonTerminalNodeStatus(operationId, hostId, OperationalJobStatus.RUNNING);
+        if (!reportNonTerminalNodeStatus(operationId, hostId, OperationalJobStatus.RUNNING))
+        {
+            return;
+        }
 
         // Bound every RUNNING node so a hanging job can't stall the operation. Whichever of execution completes or
         // timeout fires happens first reports the terminal status, the other is a no-op via terminalReported to avoid
@@ -550,16 +553,20 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
 
     /**
      * Not retried, as a delayed retry could land after a terminal write and roll the node status back.
+     *
+     * @return {@code true} if the status was written, {@code false} if the write failed
      */
-    private void reportNonTerminalNodeStatus(UUID operationId, UUID nodeId, OperationalJobStatus status)
+    private boolean reportNonTerminalNodeStatus(UUID operationId, UUID nodeId, OperationalJobStatus status)
     {
         try
         {
             reportNodeStatus(operationId, nodeId, status);
+            return true;
         }
         catch (Exception e)
         {
             LOGGER.error("Failed to report status {} for node {}. operationId={}", status, nodeId, operationId, e);
+            return false;
         }
     }
 

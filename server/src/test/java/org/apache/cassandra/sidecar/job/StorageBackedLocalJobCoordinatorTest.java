@@ -391,6 +391,20 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testJobNotSubmittedWhenRunningStatusCannotBeWritten()
+    {
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+        doThrow(new StorageProviderException("Failed to update node status"))
+        .when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.RUNNING);
+
+        executeAndWait();
+
+        assertThat(localJobManager.getJob(OPERATION_ID, NODE_1)).isNull();
+    }
+
+    @Test
     void testClearActiveOperationWhenAllNodesSucceeded()
     {
         buildCoordinator();
