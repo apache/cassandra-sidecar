@@ -66,11 +66,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.after;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -583,6 +585,110 @@ class StorageBackedLocalJobCoordinatorTest
         assertThat(recoveryAttempted.await(5, TimeUnit.SECONDS))
             .describedAs("A failing recovery future is swallowed, not propagated")
             .isTrue();
+    }
+
+    @Test
+    void testFailedTerminalStatusWriteIsReportedAgainOnNextPoll()
+    {
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        Map<UUID, OperationalJobStatus> statuses = new HashMap<>();
+        stubActiveOperation(createJobRecord(group(NODE_1)), statuses);
+        doThrow(new StorageProviderException("Failed to update node status"))
+        .when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+
+        executeAndWait();
+        verify(storageProvider, timeout(1000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+
+        statuses.put(NODE_1, OperationalJobStatus.RUNNING);
+        doNothing().when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+        executeAndWait();
+
+        verify(storageProvider, times(2)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+    }
+
+    @Test
+    void testTimeoutOutcomeIsReportedAgainEvenIfJobLaterSucceeds() throws InterruptedException
+    {
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch finished = new CountDownLatch(1);
+        localJobFactory = (opId, nodeId, host, opType) -> new LocalJob(opId, nodeId, host, opType)
+        {
+            @Override
+            protected void executeInternal()
+            {
+                try
+                {
+                    release.await();
+                }
+                catch (InterruptedException e)
+                {
+                    Thread.currentThread().interrupt();
+                }
+                finally
+                {
+                    finished.countDown();
+                }
+            }
+        };
+        buildCoordinator(OperationalJobConfigurationImpl.builder()
+                                                        .nodeExecutionTimeout(SecondBoundConfiguration.parse("1s"))
+                                                        .build());
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        Map<UUID, OperationalJobStatus> statuses = new HashMap<>();
+        stubActiveOperation(createJobRecord(group(NODE_1)), statuses);
+        doThrow(new StorageProviderException("Failed to update node status"))
+        .when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+
+        executeAndWait();
+        verify(storageProvider, timeout(3000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        release.countDown();
+        assertThat(finished.await(5, TimeUnit.SECONDS)).isTrue();
+
+        statuses.put(NODE_1, OperationalJobStatus.RUNNING);
+        doNothing().when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        executeAndWait();
+
+        verify(storageProvider, times(2)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        verify(storageProvider, never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+    }
+
+    @Test
+    void testNoStatusReportedAgainWhileLocalJobIsRunning()
+    {
+        CountDownLatch release = new CountDownLatch(1);
+        localJobFactory = (opId, nodeId, host, opType) -> new LocalJob(opId, nodeId, host, opType)
+        {
+            @Override
+            protected void executeInternal()
+            {
+                try
+                {
+                    release.await();
+                }
+                catch (InterruptedException e)
+                {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        };
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        Map<UUID, OperationalJobStatus> statuses = new HashMap<>();
+        stubActiveOperation(createJobRecord(group(NODE_1)), statuses);
+
+        try
+        {
+            executeAndWait();
+            statuses.put(NODE_1, OperationalJobStatus.RUNNING);
+            executeAndWait();
+
+            verify(storageProvider, times(1)).updateNodeStatus(eq(OPERATION_ID), eq(NODE_1), any());
+        }
+        finally
+        {
+            release.countDown();
+        }
     }
 
     @Test

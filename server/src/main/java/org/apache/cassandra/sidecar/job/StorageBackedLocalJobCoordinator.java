@@ -80,6 +80,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
 
     // When this Sidecar first saw a group's predecessors all reach a terminal state, keyed by operation and group.
     private final Map<GroupKey, Long> predecessorsCompletedAtNanos = new ConcurrentHashMap<>();
+    private final Map<NodeKey, OperationalJobStatus> decidedTerminalStatuses = new ConcurrentHashMap<>();
     private final DurationSpec randomizedInitialDelay;
     private final ExecutorPools executorPools;
     private final TimeProvider timeProvider;
@@ -255,6 +256,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
 
             if (localJobManager.getJob(operationId, hostId) != null)
             {
+                reportDecidedTerminalStatusAgain(operationId, hostId);
                 continue;
             }
 
@@ -375,6 +377,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         long timerId = executorPools.internal().setTimer(timeoutMs, id -> {
             if (terminalReported.compareAndSet(false, true))
             {
+                decidedTerminalStatuses.put(new NodeKey(operationId, hostId), OperationalJobStatus.FAILED);
                 LOGGER.warn("Node {} exceeded execution timeout of {}ms — marking as FAILED and cancelling the job. "
                             + "operationId={}", hostId, timeoutMs, operationId);
                 reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
@@ -387,9 +390,9 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             if (terminalReported.compareAndSet(false, true))
             {
                 boolean failed = ar.failed();
-                reportTerminalNodeStatusWithRetry(operationId, hostId,
-                                                  failed ? OperationalJobStatus.FAILED : OperationalJobStatus.SUCCEEDED,
-                                                  1);
+                OperationalJobStatus terminalStatus = failed ? OperationalJobStatus.FAILED : OperationalJobStatus.SUCCEEDED;
+                decidedTerminalStatuses.put(new NodeKey(operationId, hostId), terminalStatus);
+                reportTerminalNodeStatusWithRetry(operationId, hostId, terminalStatus, 1);
                 if (failed)
                 {
                     LOGGER.error("Local job failed for node {}. operationId={}", hostId, operationId, ar.cause());
@@ -401,6 +404,25 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                 recoverFailedNode(localJob, operationId, hostId);
             }
         }));
+    }
+
+    private void reportDecidedTerminalStatusAgain(UUID operationId, UUID hostId)
+    {
+        OperationalJobStatus decided = decidedTerminalStatuses.get(new NodeKey(operationId, hostId));
+        if (decided == null)
+        {
+            return;
+        }
+        LOGGER.warn("Node {} finished as {} but storage does not show a terminal status. Reporting it again. "
+                    + "operationId={}", hostId, decided, operationId);
+        try
+        {
+            reportNodeStatus(operationId, hostId, decided);
+        }
+        catch (Exception e)
+        {
+            LOGGER.error("Failed to report status {} for node {} again. operationId={}", decided, hostId, operationId, e);
+        }
     }
 
     @Nullable
@@ -655,6 +677,42 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         }
     }
 
+    /**
+     * Identifies a node within an operation
+     */
+    private static final class NodeKey
+    {
+        private final UUID operationId;
+        private final UUID nodeId;
+
+        private NodeKey(UUID operationId, UUID nodeId)
+        {
+            this.operationId = operationId;
+            this.nodeId = nodeId;
+        }
+
+        @Override
+        public boolean equals(Object other)
+        {
+            if (this == other)
+            {
+                return true;
+            }
+            if (!(other instanceof NodeKey))
+            {
+                return false;
+            }
+            NodeKey that = (NodeKey) other;
+            return operationId.equals(that.operationId) && nodeId.equals(that.nodeId);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(operationId, nodeId);
+        }
+    }
+
     private void cleanupJobsForOperation(UUID operationId)
     {
         for (LocalJob job : localJobManager.activeJobs())
@@ -672,6 +730,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     private void cleanupOperationState(UUID operationId)
     {
         predecessorsCompletedAtNanos.keySet().removeIf(key -> key.operationId.equals(operationId));
+        decidedTerminalStatuses.keySet().removeIf(key -> key.operationId.equals(operationId));
         cleanupJobsForOperation(operationId);
     }
 
@@ -681,6 +740,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     private void resetState()
     {
         predecessorsCompletedAtNanos.clear();
+        decidedTerminalStatuses.clear();
         for (LocalJob job : localJobManager.activeJobs())
         {
             localJobManager.removeJob(job.operationId(), job.nodeId(), job);
