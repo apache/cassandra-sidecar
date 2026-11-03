@@ -18,10 +18,13 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.math.BigInteger;
 import java.net.UnknownHostException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,15 +32,21 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.management.InstanceNotFoundException;
+import javax.management.ReflectionException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeState;
+import org.apache.cassandra.sidecar.adapters.base.NodeInfo.NodeStatus;
+import org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroups;
 import org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.GossipDependentStorageJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.ReplicaGroupsInfoJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.response.GossipInfoResponse;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
@@ -51,10 +60,12 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations.ENDPOINT_SNITCH_INFO_OBJ_NAME;
+import static org.apache.cassandra.sidecar.adapters.base.jmx.ReplicaGroupsInfoJmxOperations.REPLICA_GROUPS_INFO_OBJ_NAME;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations.STORAGE_SERVICE_OBJ_NAME;
 import static org.apache.cassandra.sidecar.common.server.cluster.locator.TokenRangeReplicas.generateTokenRangeReplicas;
 
@@ -72,6 +83,7 @@ public class TokenRangeReplicaProvider
     private final DnsResolver dnsResolver;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TokenRangeReplicaProvider.class);
+    private static final String UNKNOWN_STATUS = "Unknown";
 
     public TokenRangeReplicaProvider(JmxClient jmxClient, DnsResolver dnsResolver)
     {
@@ -83,6 +95,14 @@ public class TokenRangeReplicaProvider
     public TokenRangeReplicasResponse tokenRangeReplicas(Name keyspace, Partitioner partitioner)
     {
         Objects.requireNonNull(keyspace, "keyspace must be non-null");
+
+        // Cassandra versions that support witness replicas report the whole placement, witnesses included, in a
+        // single call, so the response is built from one consistent view of the ring
+        TokenRangeReplicasResponse fromReplicaGroups = tokenRangeReplicasFromReplicaGroups(keyspace.name(), partitioner);
+        if (fromReplicaGroups != null)
+        {
+            return fromReplicaGroups;
+        }
 
         StorageJmxOperations storage = initializeStorageOps();
 
@@ -109,6 +129,171 @@ public class TokenRangeReplicaProvider
         return new TokenRangeReplicasResponse(writeReplicas,
                                               readReplicas,
                                               replicaMetadata);
+    }
+
+    /**
+     * @return the token range replicas built from Cassandra's ReplicaGroupsInfo MBean, witnesses included, or
+     * {@code null} when they cannot be, in which case they are built from the StorageService MBean without witnesses
+     */
+    @Nullable
+    private TokenRangeReplicasResponse tokenRangeReplicasFromReplicaGroups(String keyspace, Partitioner partitioner)
+    {
+        try
+        {
+            ReplicaGroups replicaGroups = new ReplicaGroups(initializeReplicaGroupsInfoProxy()
+                                                            .replicaGroupsForKeyspaceByDatacenter(keyspace));
+            return new TokenRangeReplicasResponse(replicaInfos(replicaGroups.writePlacement, replicaGroups.peers, partitioner),
+                                                  replicaInfos(replicaGroups.readPlacement, replicaGroups.peers, partitioner),
+                                                  replicaMetadata(replicaGroups.peers));
+        }
+        catch (RuntimeException exception)
+        {
+            // Witnesses are left unreported rather than reported as none, so clients that need them fail instead
+            // of reading from a witness
+            if (isMissingOperation(exception))
+            {
+                // Cassandra versions without witness replicas do not register the MBean
+                LOGGER.debug("Cassandra does not report replica groups, keyspace={}", keyspace);
+            }
+            else
+            {
+                LOGGER.warn("Failed to retrieve replica groups, reporting token range replicas without witnesses "
+                            + "for keyspace={}", keyspace, exception);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @return {@code true} if the JMX call failed because Cassandra has no such MBean or operation
+     */
+    @VisibleForTesting
+    static boolean isMissingOperation(Throwable throwable)
+    {
+        for (Throwable cause = throwable; cause != null; cause = cause.getCause())
+        {
+            if (cause instanceof InstanceNotFoundException
+                || cause instanceof ReflectionException
+                || cause instanceof NoSuchMethodException)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static List<ReplicaInfo> replicaInfos(List<ReplicaGroups.RangePlacement> placement,
+                                                  Map<Integer, ReplicaGroups.Peer> peers,
+                                                  Partitioner partitioner)
+    {
+        List<ReplicaInfo> replicaInfos = new ArrayList<>();
+        for (ReplicaGroups.RangePlacement range : placement)
+        {
+            Map<String, List<String>> replicasByDc = new HashMap<>();
+            Map<String, List<String>> witnessesByDc = new HashMap<>();
+            for (Map.Entry<String, List<ReplicaGroups.Replica>> byDatacenter : range.replicasByDatacenter.entrySet())
+            {
+                for (ReplicaGroups.Replica replica : byDatacenter.getValue())
+                {
+                    String endpoint = endpoint(peers, replica.nodeId);
+                    replicasByDc.computeIfAbsent(byDatacenter.getKey(), dc -> new ArrayList<>()).add(endpoint);
+                    if (replica.isTransient)
+                    {
+                        witnessesByDc.computeIfAbsent(byDatacenter.getKey(), dc -> new ArrayList<>()).add(endpoint);
+                    }
+                }
+            }
+            // The range that wraps ends at the minimum token; it is reported ending at the maximum token instead, as
+            // the StorageService path reports it
+            for (TokenRangeReplicas bounds : generateTokenRangeReplicas(Token.from(range.start),
+                                                                        Token.from(range.end),
+                                                                        partitioner,
+                                                                        Collections.emptySet()))
+            {
+                replicaInfos.add(new ReplicaInfo(bounds.start().toBigInteger().toString(),
+                                                 bounds.end().toBigInteger().toString(),
+                                                 replicasByDc,
+                                                 witnessesByDc));
+            }
+        }
+        replicaInfos.sort(Comparator.comparing((ReplicaInfo info) -> new BigInteger(info.start()))
+                                    .thenComparing(info -> new BigInteger(info.end())));
+        return replicaInfos;
+    }
+
+    private static String endpoint(Map<Integer, ReplicaGroups.Peer> peers, int nodeId)
+    {
+        ReplicaGroups.Peer peer = peers.get(nodeId);
+        if (peer == null)
+        {
+            throw new IllegalStateException("Replica group references node " + nodeId + ", which is not in peer_metadata");
+        }
+        return peer.broadcastAddressAndPort;
+    }
+
+    private Map<String, ReplicaMetadata> replicaMetadata(Map<Integer, ReplicaGroups.Peer> peers)
+    {
+        Map<String, ReplicaMetadata> replicaMetadata = new HashMap<>(peers.size());
+        for (ReplicaGroups.Peer peer : peers.values())
+        {
+            HostAndPort hap = HostAndPort.fromString(peer.broadcastAddressAndPort);
+            String fqdn;
+            try
+            {
+                fqdn = dnsResolver.reverseResolve(hap.getHost());
+            }
+            catch (UnknownHostException e)
+            {
+                throw new RuntimeException(String.format("Failed to resolve fqdn for replica %s ", peer.broadcastAddressAndPort), e);
+            }
+            replicaMetadata.put(peer.broadcastAddressAndPort, new ReplicaMetadata(state(peer.nodeState),
+                                                                                 status(peer.nodeStatus),
+                                                                                 fqdn,
+                                                                                 hap.getHost(),
+                                                                                 hap.getPort(),
+                                                                                 peer.datacenter));
+        }
+        return replicaMetadata;
+    }
+
+    /**
+     * @return the state reported for a node, from its cluster metadata state
+     */
+    @VisibleForTesting
+    static String state(String nodeState)
+    {
+        switch (nodeState)
+        {
+            case "REGISTERED":
+            case "BOOTSTRAPPING":
+                return NodeState.JOINING.displayName();
+            case "BOOT_REPLACING":
+                return NodeState.REPLACING.displayName();
+            case "LEAVING":
+            case "LEFT":
+                return NodeState.LEAVING.displayName();
+            case "MOVING":
+                return NodeState.MOVING.displayName();
+            default:
+                return NodeState.NORMAL.displayName();
+        }
+    }
+
+    /**
+     * @return the status reported for a node, from its failure detector status
+     */
+    @VisibleForTesting
+    static String status(String nodeStatus)
+    {
+        switch (nodeStatus)
+        {
+            case "UP":
+                return NodeStatus.UP.displayName();
+            case "DOWN":
+                return NodeStatus.DOWN.displayName();
+            default:
+                return UNKNOWN_STATUS;
+        }
     }
 
     private List<TokenRangeReplicas> getTokenRangeReplicas(String rangeType, String keyspace, Partitioner partitioner,
@@ -175,6 +360,11 @@ public class TokenRangeReplicaProvider
                              }
                          })
                          .collect(Collectors.toMap(AbstractMap.SimpleEntry::getKey, AbstractMap.SimpleEntry::getValue));
+    }
+
+    protected ReplicaGroupsInfoJmxOperations initializeReplicaGroupsInfoProxy()
+    {
+        return jmxClient.proxy(ReplicaGroupsInfoJmxOperations.class, REPLICA_GROUPS_INFO_OBJ_NAME);
     }
 
     protected EndpointSnitchJmxOperations initializeEndpointProxy()

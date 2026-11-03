@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,6 +28,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.management.InstanceNotFoundException;
+import javax.management.ReflectionException;
+import javax.management.openmbean.CompositeData;
 
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +38,7 @@ import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.EndpointSnitchJmxOperations;
+import org.apache.cassandra.sidecar.adapters.base.jmx.ReplicaGroupsInfoJmxOperations;
 import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
 import org.apache.cassandra.sidecar.common.response.TokenRangeReplicasResponse;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
@@ -41,6 +47,12 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.assertj.core.api.InstanceOfAssertFactories;
 
+import static org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroupsFixture.datacenter;
+import static org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroupsFixture.peer;
+import static org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroupsFixture.range;
+import static org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroupsFixture.ranges;
+import static org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroupsFixture.replica;
+import static org.apache.cassandra.sidecar.adapters.base.data.ReplicaGroupsFixture.replicaGroups;
 import static org.assertj.core.api.Assertions.as;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.from;
@@ -48,6 +60,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -69,8 +84,11 @@ public class TokenRangeReplicaProviderTest
     public static final Name TEST_KEYSPACE = new Name("test_keyspace");
 
     private static final String TEST_HOSTNAME = "Hostname";
+    private static final String MIN_TOKEN = String.valueOf(Long.MIN_VALUE);
+    private static final String MAX_TOKEN = String.valueOf(Long.MAX_VALUE);
 
     StorageJmxOperations storageOperations;
+    ReplicaGroupsInfoJmxOperations replicaGroupsOperations;
     EndpointSnitchJmxOperations endpointOperations;
     ClusterMembershipJmxOperations clusterMembershipOperations;
     JmxClient jmxClient;
@@ -81,6 +99,7 @@ public class TokenRangeReplicaProviderTest
     void setup() throws UnknownHostException
     {
         storageOperations = mock(StorageJmxOperations.class);
+        replicaGroupsOperations = mock(ReplicaGroupsInfoJmxOperations.class);
         endpointOperations = mock(EndpointSnitchJmxOperations.class);
         clusterMembershipOperations = mock(ClusterMembershipJmxOperations.class);
         jmxClient = mock(JmxClient.class);
@@ -95,6 +114,11 @@ public class TokenRangeReplicaProviderTest
         when(jmxClient.proxy(ClusterMembershipJmxOperations.class, "org.apache.cassandra.net:type=FailureDetector"))
         .thenReturn(clusterMembershipOperations);
         when(dnsResolver.reverseResolve(any())).thenReturn(TEST_HOSTNAME);
+        // Cassandra versions without witness replicas do not register the ReplicaGroupsInfo MBean
+        when(jmxClient.proxy(ReplicaGroupsInfoJmxOperations.class, "org.apache.cassandra.locator:type=ReplicaGroupsInfo"))
+        .thenReturn(replicaGroupsOperations);
+        when(replicaGroupsOperations.replicaGroupsForKeyspaceByDatacenter(anyString()))
+        .thenThrow(new UndeclaredThrowableException(new InstanceNotFoundException()));
     }
 
     @Test
@@ -529,6 +553,175 @@ public class TokenRangeReplicaProviderTest
     private String getStatus(boolean exclude, String status, String value)
     {
         return exclude ? "" : String.format(status, value);
+    }
+
+    @Test
+    public void replicasAndWitnessesAreTakenFromReplicaGroups()
+    {
+        CompositeData[] placement = ranges(range("100", MIN_TOKEN, datacenter(TEST_DC1, full(1), full(2), full(3))),
+                                           range(MIN_TOKEN, "0", datacenter(TEST_DC1, full(2), full(3), full(1))),
+                                           range("0", "100", datacenter(TEST_DC1, full(3), full(1), witness(2))));
+        stubReplicaGroups(replicaGroups(placement,
+                                        placement,
+                                        peer(1, TEST_DC1, "127.0.0.1:7000", "JOINED", "UP"),
+                                        peer(2, TEST_DC1, "127.0.0.2:7000", "JOINED", "UP"),
+                                        peer(3, TEST_DC1, "127.0.0.3:7000", "JOINED", "DOWN")));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
+
+        // sorted by start, with the range that wraps reported ending at the maximum token
+        assertThat(result.readReplicas()).extracting(TokenRangeReplicasResponse.ReplicaInfo::start)
+                                         .containsExactly(MIN_TOKEN, "0", "100");
+        assertThat(result.readReplicas()).extracting(TokenRangeReplicasResponse.ReplicaInfo::end)
+                                         .containsExactly("0", "100", MAX_TOKEN);
+        TokenRangeReplicasResponse.ReplicaInfo withWitness = result.readReplicas().get(1);
+        assertThat(withWitness.replicasByDatacenter().get(TEST_DC1))
+        .containsExactlyInAnyOrder("127.0.0.1:7000", "127.0.0.2:7000", "127.0.0.3:7000");
+        assertThat(withWitness.witnessesByDatacenter()).isEqualTo(ImmutableMap.of(TEST_DC1, Collections.singletonList("127.0.0.2:7000")));
+        // ranges without witnesses report none, rather than leaving them unreported
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter()).isEmpty();
+        assertThat(result.readReplicas().get(2).witnessesByDatacenter()).isEmpty();
+        // witnesses are reported for write replicas too
+        assertThat(result.writeReplicas()).isEqualTo(result.readReplicas());
+
+        assertThat(result.replicaMetadata()).hasSize(3);
+        TokenRangeReplicasResponse.ReplicaMetadata metadata = result.replicaMetadata().get("127.0.0.3:7000");
+        assertThat(metadata.state()).isEqualTo("Normal");
+        assertThat(metadata.status()).isEqualTo("Down");
+        assertThat(metadata.fqdn()).isEqualTo(TEST_HOSTNAME);
+        assertThat(metadata.address()).isEqualTo("127.0.0.3");
+        assertThat(metadata.port()).isEqualTo(7000);
+        assertThat(metadata.datacenter()).isEqualTo(TEST_DC1);
+        // the StorageService MBean is not consulted
+        verify(storageOperations, never()).getRangeToEndpointWithPortMap(anyString());
+    }
+
+    @Test
+    public void pendingReplicasAreOnlyWriteReplicas()
+    {
+        CompositeData[] readPlacement = ranges(range(MIN_TOKEN, MIN_TOKEN, datacenter(TEST_DC1, full(1), full(2))));
+        CompositeData[] writePlacement = ranges(range(MIN_TOKEN, MIN_TOKEN, datacenter(TEST_DC1, full(1), full(2), full(3))));
+        stubReplicaGroups(replicaGroups(readPlacement,
+                                        writePlacement,
+                                        peer(1, TEST_DC1, "127.0.0.1:7000", "JOINED", "UP"),
+                                        peer(2, TEST_DC1, "127.0.0.2:7000", "JOINED", "UP"),
+                                        peer(3, TEST_DC1, "127.0.0.3:7000", "BOOTSTRAPPING", "UP")));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
+
+        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1))
+        .containsExactlyInAnyOrder("127.0.0.1:7000", "127.0.0.2:7000");
+        assertThat(result.writeReplicas().get(0).replicasByDatacenter().get(TEST_DC1))
+        .containsExactlyInAnyOrder("127.0.0.1:7000", "127.0.0.2:7000", "127.0.0.3:7000");
+        assertState(result.replicaMetadata(), "127.0.0.3:7000", "Joining");
+    }
+
+    @Test
+    public void replicasPerDatacenterAreTakenFromReplicaGroups()
+    {
+        CompositeData[] placement = ranges(range(MIN_TOKEN, MIN_TOKEN,
+                                                 datacenter(TEST_DC1, full(1), witness(2)),
+                                                 datacenter(TEST_DC2, full(3), witness(4))));
+        stubReplicaGroups(replicaGroups(placement,
+                                        placement,
+                                        peer(1, TEST_DC1, "127.0.0.1:7000", "JOINED", "UP"),
+                                        peer(2, TEST_DC1, "127.0.0.2:7000", "JOINED", "UP"),
+                                        peer(3, TEST_DC2, "128.0.0.1:7000", "JOINED", "UP"),
+                                        peer(4, TEST_DC2, "128.0.0.2:7000", "BOOT_REPLACING", "UP")));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.MURMUR3);
+
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter())
+        .isEqualTo(ImmutableMap.of(TEST_DC1, Collections.singletonList("127.0.0.2:7000"),
+                                   TEST_DC2, Collections.singletonList("128.0.0.2:7000")));
+        assertThat(result.replicaMetadata().get("128.0.0.1:7000").datacenter()).isEqualTo(TEST_DC2);
+        assertState(result.replicaMetadata(), "128.0.0.2:7000", "Replacing");
+    }
+
+    @Test
+    public void witnessesAreNotReportedWhenCassandraDoesNotSupportThem() throws UnknownHostException
+    {
+        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
+        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        stubSingleDatacenter(readReplicaMappings);
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
+
+        assertThat(result.readReplicas()).hasSize(1);
+        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter()).isNull();
+        assertThat(result.writeReplicas()).allSatisfy(replicaInfo -> assertThat(replicaInfo.witnessesByDatacenter()).isNull());
+    }
+
+    @Test
+    public void replicasAreStillReportedWhenReplicaGroupsAreUnusable() throws UnknownHostException
+    {
+        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
+        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        stubSingleDatacenter(readReplicaMappings);
+        // node 2 is a replica but missing from peer_metadata
+        CompositeData[] placement = ranges(range(MIN_TOKEN, MIN_TOKEN, datacenter(TEST_DC1, full(1), witness(2))));
+        stubReplicaGroups(replicaGroups(placement, placement, peer(1, TEST_DC1, "127.0.0.1:7000", "JOINED", "UP")));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
+
+        // built from the StorageService MBean instead, without witnesses
+        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter()).isNull();
+    }
+
+    @Test
+    public void missingJmxOperationIsRecognized()
+    {
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(
+        new UndeclaredThrowableException(new InstanceNotFoundException()))).isTrue();
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(
+        new UndeclaredThrowableException(new ReflectionException(new NoSuchMethodException())))).isTrue();
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(new IllegalStateException("failure inside Cassandra")))
+        .isFalse();
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(
+        new UndeclaredThrowableException(new IOException("connection reset")))).isFalse();
+    }
+
+    @Test
+    public void nodeStatesAndStatusesMapToTheReportedOnes()
+    {
+        assertThat(TokenRangeReplicaProvider.state("JOINED")).isEqualTo("Normal");
+        assertThat(TokenRangeReplicaProvider.state("REGISTERED")).isEqualTo("Joining");
+        assertThat(TokenRangeReplicaProvider.state("BOOTSTRAPPING")).isEqualTo("Joining");
+        assertThat(TokenRangeReplicaProvider.state("BOOT_REPLACING")).isEqualTo("Replacing");
+        assertThat(TokenRangeReplicaProvider.state("LEAVING")).isEqualTo("Leaving");
+        assertThat(TokenRangeReplicaProvider.state("LEFT")).isEqualTo("Leaving");
+        assertThat(TokenRangeReplicaProvider.state("MOVING")).isEqualTo("Moving");
+        assertThat(TokenRangeReplicaProvider.status("UP")).isEqualTo("Up");
+        assertThat(TokenRangeReplicaProvider.status("DOWN")).isEqualTo("Down");
+        assertThat(TokenRangeReplicaProvider.status("SOMETHING_ELSE")).isEqualTo("Unknown");
+    }
+
+    private void stubReplicaGroups(CompositeData replicaGroups)
+    {
+        reset(replicaGroupsOperations);
+        when(replicaGroupsOperations.replicaGroupsForKeyspaceByDatacenter(TEST_KEYSPACE.name())).thenReturn(replicaGroups);
+    }
+
+    private void stubSingleDatacenter(Map<List<String>, List<String>> readReplicaMappings) throws UnknownHostException
+    {
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(readReplicaMappings);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(new HashMap<>());
+        when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
+        when(clusterMembershipOperations.getAllEndpointStatesWithPort()).thenReturn("");
+    }
+
+    private static CompositeData full(int nodeId)
+    {
+        return replica(nodeId, "FULL");
+    }
+
+    private static CompositeData witness(int nodeId)
+    {
+        return replica(nodeId, "TRANSIENT");
     }
 
     private static void assertState(Map<String, TokenRangeReplicasResponse.ReplicaMetadata> map,
