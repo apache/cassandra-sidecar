@@ -98,7 +98,7 @@ class StorageBackedLocalJobCoordinatorIntegrationTest extends IntegrationTestBas
                                                                                             mockFetcher,
                                                                                             localJobManager,
                                                                                             sidecarConfig,
-                                                                                            testFactory,
+                                                                                            Collections.singletonMap(OperationType.DRAIN, testFactory),
                                                                                             TimeProvider.DEFAULT_TIME_PROVIDER);
 
         executeAndWait(coordinator);

@@ -66,13 +66,16 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     private static final Logger LOGGER = LoggerFactory.getLogger(StorageBackedLocalJobCoordinator.class);
     private static final int MAX_NODE_STATUS_RETRIES = 10;
     private static final long NODE_STATUS_RETRY_DELAY_MS = 5000;
+    private static final LocalJobFactory UNSUPPORTED_OPERATION_FACTORY = (operationId, nodeId, host, operationType) -> {
+        throw new IllegalStateException("No LocalJobFactory for operation type " + operationType);
+    };
 
     private final OperationalJobCoordinator operationalJobCoordinator;
     private final StorageProvider storageProvider;
     private final InstanceMetadataFetcher instanceMetadataFetcher;
     private final LocalJobManager localJobManager;
     private final OperationalJobConfiguration config;
-    private final LocalJobFactory localJobFactory;
+    private final Map<OperationType, LocalJobFactory> localJobFactories;
     private final long defaultNodeExecutionTimeoutMs;
 
     // When this Sidecar first saw a group's predecessors all reach a terminal state, keyed by operation and group.
@@ -88,7 +91,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                                             InstanceMetadataFetcher instanceMetadataFetcher,
                                             LocalJobManager localJobManager,
                                             SidecarConfiguration configuration,
-                                            LocalJobFactory localJobFactory,
+                                            Map<OperationType, LocalJobFactory> localJobFactories,
                                             TimeProvider timeProvider)
     {
         this.executorPools = executorPools;
@@ -98,12 +101,17 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         this.instanceMetadataFetcher = instanceMetadataFetcher;
         this.localJobManager = localJobManager;
         this.config = configuration.operationalJobConfiguration();
-        this.localJobFactory = localJobFactory;
+        this.localJobFactories = localJobFactories;
         this.defaultNodeExecutionTimeoutMs = config.nodeExecutionTimeout().toMillis();
 
         long delaySeconds = config.localJobCoordinationDelay().toSeconds();
         long randomSeconds = ThreadLocalRandom.current().nextLong(delaySeconds + 1);
         this.randomizedInitialDelay = SecondBoundConfiguration.parse(Math.max(1, randomSeconds) + "s");
+    }
+
+    private LocalJobFactory factoryFor(OperationType operationType)
+    {
+        return localJobFactories.getOrDefault(operationType, UNSUPPORTED_OPERATION_FACTORY);
     }
 
     @Override
@@ -250,7 +258,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                 continue;
             }
 
-            boolean requiresPredecessorSuccess = localJobFactory.requiresPredecessorSuccess();
+            boolean requiresPredecessorSuccess = factoryFor(operationType).requiresPredecessorSuccess();
             if (!arePredecessorsComplete(hostId, nodeExecutionOrder, nodeStatuses, requiresPredecessorSuccess))
             {
                 if (requiresPredecessorSuccess && hasFailedPredecessor(hostId, nodeExecutionOrder, nodeStatuses))
@@ -263,7 +271,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                 continue;
             }
 
-            if (!isGroupSettleElapsed(operationId, groupIndex, jobRecord.operationMetadata()))
+            if (!isGroupSettleElapsed(operationId, operationType, groupIndex, jobRecord.operationMetadata()))
             {
                 continue;
             }
@@ -287,7 +295,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
      *
      * @return {@code true} if the next group may start, {@code false} to re-check on a later poll
      */
-    private boolean isGroupSettleElapsed(UUID operationId, int groupIndex,
+    private boolean isGroupSettleElapsed(UUID operationId, OperationType operationType, int groupIndex,
                                          Map<String, String> operationMetadata)
     {
         if (groupIndex == 0)
@@ -295,7 +303,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             return true;
         }
 
-        SecondBoundConfiguration wait = localJobFactory.waitBetweenExecutionGroups(operationMetadata);
+        SecondBoundConfiguration wait = factoryFor(operationType).waitBetweenExecutionGroups(operationMetadata);
         if (wait == null || wait.toMillis() <= 0)
         {
             return true;
@@ -323,7 +331,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                                       Map<UUID, OperationalJobStatus> nodeStatuses,
                                       Map<String, String> operationMetadata)
     {
-        if (localJobFactory.canRecover())
+        if (factoryFor(operationType).canRecover())
         {
             LOGGER.info("Node {} can recover — resetting to CREATED and resubmitting. operationId={}",
                          hostId, operationId);
@@ -401,7 +409,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     {
         try
         {
-            return localJobFactory.createJob(operationId, hostId, host, operationType, operationMetadata);
+            return factoryFor(operationType).createJob(operationId, hostId, host, operationType, operationMetadata);
         }
         catch (Exception e)
         {
@@ -423,7 +431,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
 
     private long resolveNodeExecutionTimeoutMs(OperationType operationType)
     {
-        SecondBoundConfiguration override = localJobFactory.nodeExecutionTimeout();
+        SecondBoundConfiguration override = factoryFor(operationType).nodeExecutionTimeout();
         return override != null ? override.toMillis() : defaultNodeExecutionTimeoutMs;
     }
 

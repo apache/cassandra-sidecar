@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.modules;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.Singleton;
+import com.google.inject.multibindings.MapBinder;
 import com.google.inject.multibindings.ProvidesIntoMap;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.PUT;
@@ -34,6 +36,7 @@ import jakarta.ws.rs.Path;
 import org.apache.cassandra.sidecar.adapters.base.db.schema.ConnectedClientsSchema;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV1;
 import org.apache.cassandra.sidecar.common.ApiEndpointsV2;
+import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.response.CompactionStatsResponse;
 import org.apache.cassandra.sidecar.common.response.CompactionStopResponse;
 import org.apache.cassandra.sidecar.common.response.ConnectedClientStatsResponse;
@@ -128,9 +131,7 @@ public class CassandraOperationsModule extends AbstractModule
             warnIfLowReplicationFactor(configuration.operationalJobConfiguration(), schemaConfiguration);
         }
         bind(LocalJobManager.class).in(Singleton.class);
-        bind(LocalJobFactory.class).toInstance((operationId, nodeId, instanceHost, operationType) -> {
-            throw new UnsupportedOperationException("No LocalJob implementation for " + operationType);
-        });
+        MapBinder.newMapBinder(binder(), OperationType.class, LocalJobFactory.class);
     }
 
     static void validateOperationalJobConfiguration(OperationalJobConfiguration config, boolean schemaEnabled)
@@ -211,7 +212,7 @@ public class CassandraOperationsModule extends AbstractModule
                                                   InstanceMetadataFetcher instanceMetadataFetcher,
                                                   LocalJobManager localJobManager,
                                                   SidecarConfiguration configuration,
-                                                  LocalJobFactory localJobFactory,
+                                                  Map<OperationType, LocalJobFactory> localJobFactories,
                                                   TimeProvider timeProvider)
     {
         return new StorageBackedLocalJobCoordinator(executorPools,
@@ -220,7 +221,7 @@ public class CassandraOperationsModule extends AbstractModule
                                                     instanceMetadataFetcher,
                                                     localJobManager,
                                                     configuration,
-                                                    localJobFactory,
+                                                    localJobFactories,
                                                     timeProvider);
     }
 

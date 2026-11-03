@@ -91,6 +91,7 @@ class StorageBackedLocalJobCoordinatorTest
     private LocalJobManager localJobManager;
     private StorageBackedLocalJobCoordinator coordinator;
     private LocalJobFactory localJobFactory;
+    private Map<OperationType, LocalJobFactory> localJobFactories;
     private final FakeTimeProvider timeProvider = new FakeTimeProvider();
 
     @BeforeEach
@@ -728,6 +729,54 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testUsesFactoryBoundForEachOperationType()
+    {
+        localJobFactories = new HashMap<>();
+        localJobFactories.put(OperationType.DRAIN, new TestLocalJobFactory());
+        localJobFactories.put(OperationType.REPAIR, failingFactoryFor(NODE_2));
+        buildCoordinator();
+
+        UUID repairOperationId = UUIDs.timeBased();
+        OperationalJobRecord repairJob = OperationalJobRecord.builder()
+                                                             .jobId(repairOperationId)
+                                                             .operationType(OperationType.REPAIR)
+                                                             .status(OperationalJobStatus.RUNNING)
+                                                             .nodeExecutionOrder(Collections.singletonList(group(NODE_2)))
+                                                             .build();
+        setupMultipleNodeInstances(new UUID[]{ NODE_1, NODE_2 }, new String[]{ "127.0.0.1", "127.0.0.2" });
+
+        Map<OperationType, UUID> activeOps = new HashMap<>();
+        activeOps.put(OperationType.DRAIN, OPERATION_ID);
+        activeOps.put(OperationType.REPAIR, repairOperationId);
+
+        when(storageProvider.isAvailable()).thenReturn(true);
+        when(operationalJobCoordinator.getActiveOperations()).thenReturn(activeOps);
+        when(storageProvider.findJob(OPERATION_ID)).thenReturn(createJobRecord(group(NODE_1)));
+        when(storageProvider.findJob(repairOperationId)).thenReturn(repairJob);
+        when(storageProvider.getNodeStatusesForOperation(OPERATION_ID)).thenReturn(new HashMap<>());
+        when(storageProvider.getNodeStatusesForOperation(repairOperationId)).thenReturn(new HashMap<>());
+
+        executeAndWait();
+
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.RUNNING);
+        verify(storageProvider).updateNodeStatus(repairOperationId, NODE_2, OperationalJobStatus.FAILED);
+    }
+
+    @Test
+    void testNodeMarkedFailedWhenNoFactoryBoundForOperationType()
+    {
+        localJobFactories = Collections.emptyMap();
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+
+        executeAndWait();
+
+        verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        verify(storageProvider, never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.RUNNING);
+    }
+
+    @Test
     void testStorageProviderExceptionHandledGracefully()
     {
         buildCoordinator();
@@ -795,13 +844,19 @@ class StorageBackedLocalJobCoordinatorTest
         {
             localJobFactory = new TestLocalJobFactory();
         }
+        if (localJobFactories == null)
+        {
+            localJobFactories = new HashMap<>();
+            localJobFactories.put(OperationType.DRAIN, localJobFactory);
+            localJobFactories.put(OperationType.REPAIR, localJobFactory);
+        }
         coordinator = new StorageBackedLocalJobCoordinator(executorPools,
                                                            operationalJobCoordinator,
                                                            storageProvider,
                                                            instanceMetadataFetcher,
                                                            localJobManager,
                                                            sidecarConfig,
-                                                           localJobFactory,
+                                                           localJobFactories,
                                                            timeProvider);
     }
 
