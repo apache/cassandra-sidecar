@@ -137,6 +137,16 @@ public interface StorageJmxOperations
     Map<List<String>, List<String>> getPendingRangeToEndpointWithPortMap(String keyspace);
 
     /**
+     * Retrieve the witness (transient) replica endpoints by token range for the given keyspace. Only Cassandra
+     * versions that support witness replicas have this operation.
+     *
+     * @param keyspace the keyspace in Cassandra
+     * @return Returns a mapping of token range (represented by the first two entries in the key) to the endpoints
+     * that are witnesses for the range, a subset of those {@link #getRangeToEndpointWithPortMap(String)} returns
+     */
+    Map<List<String>, List<String>> getRangeToWitnessesWithPortMap(String keyspace);
+
+    /**
      * @return {@code true} if gossip is running, {@code false} otherwise
      */
     boolean isGossipRunning();
