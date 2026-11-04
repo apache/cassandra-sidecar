@@ -18,18 +18,24 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.math.BigInteger;
 import java.net.UnknownHostException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import javax.management.ReflectionException;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.net.HostAndPort;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +57,7 @@ import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.GossipInfoParser;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.cassandra.sidecar.adapters.base.jmx.ClusterMembershipJmxOperations.FAILURE_DETECTOR_OBJ_NAME;
@@ -92,16 +99,27 @@ public class TokenRangeReplicaProvider
         List<TokenRangeReplicas> pendingTokenRangeReplicas =
         getTokenRangeReplicas("Pending", keyspace.name(), partitioner, storage::getPendingRangeToEndpointWithPortMap);
 
+        // null when Cassandra does not report witness replicas
+        List<TokenRangeReplicas> witnessTokenRangeReplicas = witnessTokenRangeReplicas(storage, keyspace.name(), partitioner);
+
         // Merge natural and pending range replicas to generate candidates for write-replicas
         List<TokenRangeReplicas> allTokenRangeReplicas = new ArrayList<>(naturalTokenRangeReplicas);
         allTokenRangeReplicas.addAll(pendingTokenRangeReplicas);
 
-        Map<String, String> hostToDatacenter = buildHostToDatacenterMapping(allTokenRangeReplicas);
+        List<TokenRangeReplicas> datacenterLookup = new ArrayList<>(allTokenRangeReplicas);
+        if (witnessTokenRangeReplicas != null)
+        {
+            // Witnesses are replicas, but are looked up too so a witness Cassandra reports is never dropped
+            datacenterLookup.addAll(witnessTokenRangeReplicas);
+        }
+        Map<String, String> hostToDatacenter = buildHostToDatacenterMapping(datacenterLookup);
 
         // Retrieve map of all token ranges (pending & primary) to endpoints
         List<ReplicaInfo> writeReplicas = writeReplicasFromPendingRanges(allTokenRangeReplicas, hostToDatacenter);
 
-        List<ReplicaInfo> readReplicas = readReplicasFromReplicaMapping(naturalTokenRangeReplicas, hostToDatacenter);
+        List<ReplicaInfo> readReplicas = readReplicasFromReplicaMapping(naturalTokenRangeReplicas,
+                                                                        hostToDatacenter,
+                                                                        witnessesByTokenRange(witnessTokenRangeReplicas));
         Map<String, ReplicaMetadata> replicaMetadata = replicaMetadata(allTokenRangeReplicas,
                                                                        storage,
                                                                        hostToDatacenter);
@@ -117,6 +135,76 @@ public class TokenRangeReplicaProvider
         Map<List<String>, List<String>> rangeMappings = rangeMappingSupplier.apply(keyspace);
         LOGGER.debug("{} token range mappings for keyspace={}, rangeMappings={}", rangeType, keyspace, rangeMappings);
         return transformRangeMappings(rangeMappings, partitioner);
+    }
+
+    /**
+     * @return the witness replicas of each token range, or {@code null} when Cassandra does not report them
+     */
+    @Nullable
+    private List<TokenRangeReplicas> witnessTokenRangeReplicas(StorageJmxOperations storage,
+                                                               String keyspace,
+                                                               Partitioner partitioner)
+    {
+        try
+        {
+            return getTokenRangeReplicas("Witness", keyspace, partitioner, storage::getRangeToWitnessesWithPortMap);
+        }
+        catch (RuntimeException exception)
+        {
+            // Leaving witnesses unreported, rather than reporting none for every range, lets clients that need them
+            // fail instead of reading from a witness
+            if (isMissingOperation(exception))
+            {
+                // Cassandra versions without witness replicas do not have the operation
+                LOGGER.debug("Cassandra does not report witness replicas, keyspace={}", keyspace);
+            }
+            else
+            {
+                LOGGER.warn("Failed to retrieve witness replicas, not reporting them for keyspace={}", keyspace, exception);
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @return {@code true} if the JMX call failed because the MBean has no such operation
+     */
+    @VisibleForTesting
+    static boolean isMissingOperation(Throwable throwable)
+    {
+        for (Throwable cause = throwable; cause != null; cause = cause.getCause())
+        {
+            if (cause instanceof ReflectionException || cause instanceof NoSuchMethodException)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return the witnesses of each token range, keyed by {@link #rangeKey(TokenRangeReplicas)}, or {@code null}
+     * when Cassandra does not report them
+     */
+    @Nullable
+    private static Map<List<BigInteger>, Set<String>> witnessesByTokenRange(@Nullable List<TokenRangeReplicas> witnesses)
+    {
+        if (witnesses == null)
+        {
+            return null;
+        }
+        Map<List<BigInteger>, Set<String>> witnessesByTokenRange = new HashMap<>();
+        for (TokenRangeReplicas range : witnesses)
+        {
+            witnessesByTokenRange.computeIfAbsent(rangeKey(range), key -> new HashSet<>()).addAll(range.replicaSet());
+        }
+        return witnessesByTokenRange;
+    }
+
+    // Witness ranges go through the same transformation as the natural ranges, so their bounds match
+    private static List<BigInteger> rangeKey(TokenRangeReplicas range)
+    {
+        return Arrays.asList(range.start().toBigInteger(), range.end().toBigInteger());
     }
 
     private List<TokenRangeReplicas> transformRangeMappings(Map<List<String>, List<String>> replicaMappings,
@@ -199,27 +287,39 @@ public class TokenRangeReplicaProvider
     {
         // Candidate write-replica mappings are normalized by consolidating overlapping ranges
         return TokenRangeReplicas.normalize(tokenRangeReplicaSet).stream()
-                                 .map(range -> buildReplicaInfo(hostToDatacenter, range))
+                                 .map(range -> buildReplicaInfo(hostToDatacenter, range, null))
                                  .collect(toList());
     }
 
     private List<ReplicaInfo> readReplicasFromReplicaMapping(List<TokenRangeReplicas> naturalTokenRangeReplicas,
-                                                             Map<String, String> hostToDatacenter)
+                                                             Map<String, String> hostToDatacenter,
+                                                             @Nullable Map<List<BigInteger>, Set<String>> witnesses)
     {
         return naturalTokenRangeReplicas.stream()
                                         .sorted()
-                                        .map(rep -> buildReplicaInfo(hostToDatacenter, rep))
+                                        .map(rep -> buildReplicaInfo(hostToDatacenter, rep, witnesses))
                                         .collect(toList());
     }
 
+    /**
+     * @param witnesses the witnesses of each token range, or {@code null} to not report witnesses
+     */
     @NotNull
-    private static ReplicaInfo buildReplicaInfo(Map<String, String> hostToDatacenter, TokenRangeReplicas rep)
+    private static ReplicaInfo buildReplicaInfo(Map<String, String> hostToDatacenter,
+                                                TokenRangeReplicas rep,
+                                                @Nullable Map<List<BigInteger>, Set<String>> witnesses)
     {
         Map<String, List<String>> replicasByDc = replicasByDataCenter(hostToDatacenter, rep.replicaSet());
+        Map<String, List<String>> witnessesByDc = witnesses == null
+                                                  ? null
+                                                  : replicasByDataCenter(hostToDatacenter,
+                                                                         witnesses.getOrDefault(rangeKey(rep),
+                                                                                                Collections.emptySet()));
 
         return new ReplicaInfo(rep.start().toBigInteger().toString(),
                                rep.end().toBigInteger().toString(),
-                               replicasByDc);
+                               replicasByDc,
+                               witnessesByDc);
     }
 
     private Map<String, String> buildHostToDatacenterMapping(List<TokenRangeReplicas> replicaSet)

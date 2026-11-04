@@ -18,6 +18,8 @@
 
 package org.apache.cassandra.sidecar.adapters.base;
 
+import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collections;
@@ -26,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import javax.management.ReflectionException;
 
 import com.google.common.collect.ImmutableMap;
 import org.junit.jupiter.api.BeforeEach;
@@ -529,6 +532,107 @@ public class TokenRangeReplicaProviderTest
     private String getStatus(boolean exclude, String status, String value)
     {
         return exclude ? "" : String.format(status, value);
+    }
+
+    @Test
+    public void witnessesAreReportedForReadReplicas() throws UnknownHostException
+    {
+        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
+        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        readReplicaMappings.put(TOKEN_RANGE2, TEST_ENDPOINTS1);
+        stubSingleDatacenter(readReplicaMappings);
+        // only the first range has a witness
+        when(storageOperations.getRangeToWitnessesWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(ImmutableMap.of(TOKEN_RANGE1, Collections.singletonList("127.0.0.3:7000")));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
+
+        assertThat(result.readReplicas()).hasSize(2);
+        assertThat(result.readReplicas().get(0).start()).isEqualTo("0");
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter())
+        .isEqualTo(ImmutableMap.of(TEST_DC1, Collections.singletonList("127.0.0.3:7000")));
+        assertThat(result.readReplicas().get(1).start()).isEqualTo("200");
+        assertThat(result.readReplicas().get(1).witnessesByDatacenter()).isEmpty();
+        // write replicas are normalized across natural and pending ranges, so witnesses are not reported for them
+        assertThat(result.writeReplicas()).allSatisfy(replicaInfo -> assertThat(replicaInfo.witnessesByDatacenter()).isNull());
+    }
+
+    @Test
+    public void witnessesFollowTheSplitOfAWrappingRange() throws UnknownHostException
+    {
+        List<String> wrappingRange = Arrays.asList("100", "0");
+        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
+        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        readReplicaMappings.put(wrappingRange, TEST_ENDPOINTS1);
+        stubSingleDatacenter(readReplicaMappings);
+        when(storageOperations.getRangeToWitnessesWithPortMap(TEST_KEYSPACE.name()))
+        .thenReturn(ImmutableMap.of(wrappingRange, Collections.singletonList("127.0.0.2:7000")));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
+
+        // the wrapping range is split in two at the partitioner's minimum token, and both halves keep its witness
+        assertThat(result.readReplicas()).hasSize(3);
+        for (TokenRangeReplicasResponse.ReplicaInfo replicaInfo : result.readReplicas())
+        {
+            Map<String, List<String>> expected = replicaInfo.start().equals("0")
+                                                 ? Collections.emptyMap()
+                                                 : ImmutableMap.of(TEST_DC1, Collections.singletonList("127.0.0.2:7000"));
+            assertThat(replicaInfo.witnessesByDatacenter()).describedAs(replicaInfo.toString()).isEqualTo(expected);
+        }
+    }
+
+    @Test
+    public void witnessesAreNotReportedWhenCassandraDoesNotSupportThem() throws UnknownHostException
+    {
+        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
+        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        stubSingleDatacenter(readReplicaMappings);
+        // what the JMX proxy throws when the MBean has no such operation
+        when(storageOperations.getRangeToWitnessesWithPortMap(TEST_KEYSPACE.name()))
+        .thenThrow(new UndeclaredThrowableException(new ReflectionException(new NoSuchMethodException())));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
+
+        assertThat(result.readReplicas()).hasSize(1);
+        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter()).isNull();
+    }
+
+    @Test
+    public void witnessesAreNotReportedWhenTheyFailToBeRetrieved() throws UnknownHostException
+    {
+        Map<List<String>, List<String>> readReplicaMappings = new HashMap<>();
+        readReplicaMappings.put(TOKEN_RANGE1, TEST_ENDPOINTS1);
+        stubSingleDatacenter(readReplicaMappings);
+        when(storageOperations.getRangeToWitnessesWithPortMap(TEST_KEYSPACE.name()))
+        .thenThrow(new IllegalStateException("failure inside Cassandra"));
+
+        TokenRangeReplicasResponse result = instance.tokenRangeReplicas(TEST_KEYSPACE, Partitioners.RANDOM);
+
+        // the replicas are still reported, so clients that do not need witnesses are unaffected
+        assertThat(result.readReplicas().get(0).replicasByDatacenter().get(TEST_DC1)).containsAll(TEST_ENDPOINTS1);
+        assertThat(result.readReplicas().get(0).witnessesByDatacenter()).isNull();
+    }
+
+    @Test
+    public void missingJmxOperationIsRecognized()
+    {
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(
+        new UndeclaredThrowableException(new ReflectionException(new NoSuchMethodException())))).isTrue();
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(new IllegalStateException("failure inside Cassandra")))
+        .isFalse();
+        assertThat(TokenRangeReplicaProvider.isMissingOperation(
+        new UndeclaredThrowableException(new IOException("connection reset")))).isFalse();
+    }
+
+    private void stubSingleDatacenter(Map<List<String>, List<String>> readReplicaMappings) throws UnknownHostException
+    {
+        when(storageOperations.getRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(readReplicaMappings);
+        when(storageOperations.getPendingRangeToEndpointWithPortMap(TEST_KEYSPACE.name())).thenReturn(new HashMap<>());
+        when(endpointOperations.getDatacenter(anyString())).thenReturn(TEST_DC1);
+        when(storageOperations.getLiveNodesWithPort()).thenReturn(TEST_ENDPOINTS1);
+        when(storageOperations.getUnreachableNodesWithPort()).thenReturn(Collections.emptyList());
+        when(clusterMembershipOperations.getAllEndpointStatesWithPort()).thenReturn("");
     }
 
     private static void assertState(Map<String, TokenRangeReplicasResponse.ReplicaMetadata> map,
