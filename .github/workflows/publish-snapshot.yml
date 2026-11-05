@@ -60,8 +60,30 @@ jobs:
           distribution: "temurin"
           cache: "gradle"
 
+      - name: Restore dtest jars
+        id: cache-dtest-jars
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            dtest-jars/
+            cassandra-tarballs/
+          key: dtest-jars-${{ hashFiles('scripts/build-dtest-jars.sh', 'gradle/wrapper/gradle-wrapper.properties') }}
+
+      - name: Build dependencies (cache miss fallback)
+        if: steps.cache-dtest-jars.outputs.cache-hit != 'true'
+        run: |
+          for i in {2..20}; do
+            sudo ip addr add 127.0.0.$i/8 dev lo
+            echo 127.0.0.${i} localhost${i} | sudo tee -a /etc/hosts
+          done
+
+          export CASSANDRA_USE_JDK11="true"
+  
+          ./scripts/build-dtest-jars.sh
+
       - name: Publish snapshot artifacts
         env:
           MAVEN_USERNAME: ${{ secrets.NEXUS_USER }}
           MAVEN_PASSWORD: ${{ secrets.NEXUS_PW }}
+          CASSANDRA_DEP_DIR: ${{ github.workspace }}/dtest-jars
         run: ./scripts/publish-snapshot.sh
