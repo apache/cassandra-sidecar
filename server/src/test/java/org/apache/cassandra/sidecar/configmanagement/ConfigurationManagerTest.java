@@ -32,10 +32,12 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import io.vertx.core.json.JsonObject;
 import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
@@ -53,6 +55,9 @@ class ConfigurationManagerTest
 {
     private static final Path BASE_TEMPLATE = Paths.get("src/test/resources/configmanagement/cassandra_latest.yaml");
 
+    @TempDir
+    Path tempDir;
+
     private InMemoryConfigurationProvider provider;
 
     @BeforeEach
@@ -64,7 +69,7 @@ class ConfigurationManagerTest
     @Test
     void testGetEffectiveConfigurationNoOverlay()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
 
         ConfigurationOverlaySnapshot result = manager.getEffectiveConfiguration(instance);
@@ -92,7 +97,7 @@ class ConfigurationManagerTest
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(Instant.now(), overlay);
         provider.storeOverlay(instance, null, snapshot);
 
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         ConfigurationOverlaySnapshot result = manager.getEffectiveConfiguration(instance);
 
         // Overlay values take precedence
@@ -125,19 +130,19 @@ class ConfigurationManagerTest
             }
         };
 
-        ConfigurationManager manager = new ConfigurationManager(failingProvider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(failingProvider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
 
         assertThatThrownBy(() -> manager.getEffectiveConfiguration(instance))
-                .isInstanceOf(ConfigurationManagerException.class)
-                .hasMessageContaining("Failed to retrieve configuration overlay from provider")
+                .isInstanceOf(ConfigurationProviderUnavailableException.class)
+                .hasMessageContaining("FAIL policy")
                 .hasCauseInstanceOf(UncheckedIOException.class);
     }
 
     @Test
     void testGetEffectiveConfigurationNullBaseTemplateNoOverlay()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, null);
+        ConfigurationManager manager = new ConfigurationManager(provider, null, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
 
         ConfigurationOverlaySnapshot result = manager.getEffectiveConfiguration(instance);
@@ -161,7 +166,7 @@ class ConfigurationManagerTest
         ConfigurationOverlaySnapshot snapshot = new ConfigurationOverlaySnapshot(overlayTime, overlay);
         provider.storeOverlay(instance, null, snapshot);
 
-        ConfigurationManager manager = new ConfigurationManager(provider, null);
+        ConfigurationManager manager = new ConfigurationManager(provider, null, tempDir, FailurePolicy.FAIL);
         ConfigurationOverlaySnapshot result = manager.getEffectiveConfiguration(instance);
 
         assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(128);
@@ -172,7 +177,7 @@ class ConfigurationManagerTest
     @Test
     void testGetEffectiveConfigurationCachesBaseSnapshot()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
 
         ConfigurationOverlaySnapshot first = manager.getEffectiveConfiguration(instance);
@@ -184,7 +189,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchAddTopLevelKey()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
 
         ConfigurationOverlaySnapshot baseEffective = manager.getEffectiveConfiguration(instance);
@@ -205,7 +210,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchAddJvmOpt()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -230,7 +235,7 @@ class ConfigurationManagerTest
         CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(null, jvmOpts);
         provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
 
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
 
         List<ConfigurationPatchOperation> ops = List.of(
@@ -257,7 +262,7 @@ class ConfigurationManagerTest
         CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(null, jvmOpts);
         provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
 
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
 
         List<ConfigurationPatchOperation> ops = List.of(
@@ -285,7 +290,7 @@ class ConfigurationManagerTest
         CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
         provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
 
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
 
         List<ConfigurationPatchOperation> ops = List.of(
@@ -301,7 +306,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchRemoveTemplateOnlyKeyFails()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -317,7 +322,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchReplaceExistingKey()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -334,7 +339,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchReplaceAbsentKeyFails()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -350,7 +355,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchTestMatchingValue()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -374,7 +379,7 @@ class ConfigurationManagerTest
         CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
         provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
 
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
 
         List<ConfigurationPatchOperation> ops = List.of(
@@ -402,7 +407,7 @@ class ConfigurationManagerTest
         CassandraConfigurationOverlay initial = new CassandraConfigurationOverlay(initialYaml, null);
         provider.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), initial));
 
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String actualHash = manager.getEffectiveConfiguration(instance).hash();
         String staleHash = "sha256:0000000000000000000000000000000000000000000000000000000000000000";
 
@@ -450,7 +455,7 @@ class ConfigurationManagerTest
             }
         };
 
-        ConfigurationManager manager = new ConfigurationManager(rejectingProvider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(rejectingProvider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
 
         List<ConfigurationPatchOperation> ops = List.of(
@@ -495,7 +500,7 @@ class ConfigurationManagerTest
             }
         };
 
-        ConfigurationManager manager = new ConfigurationManager(conflictingProvider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(conflictingProvider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String effectiveHash = manager.getEffectiveConfiguration(instance).hash();
 
         List<ConfigurationPatchOperation> ops = List.of(
@@ -530,17 +535,19 @@ class ConfigurationManagerTest
             }
         };
 
-        ConfigurationManager manager = new ConfigurationManager(failingProvider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(failingProvider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
 
         List<ConfigurationPatchOperation> ops = List.of(
                 new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
                                                "/configuration/cassandraYaml/concurrent_reads", 128));
 
+        // The patch path reads the current overlay first, so an unavailable provider surfaces the
+        // ConfigurationProviderUnavailableException from the read before any write is attempted.
         assertThatThrownBy(() -> manager.patchConfiguration(instance, "sha256:abc", ops))
-                .isInstanceOf(ConfigurationManagerException.class)
+                .isInstanceOf(ConfigurationProviderUnavailableException.class)
                 .isNotInstanceOf(ConfigurationConflictException.class)
-                .hasMessageContaining("Failed to patch configuration")
+                .hasMessageContaining("FAIL policy")
                 .hasCauseInstanceOf(UncheckedIOException.class);
     }
 
@@ -548,7 +555,7 @@ class ConfigurationManagerTest
     void testPatchConcurrentSameInstance() throws Exception
     {
         InstanceMetadata instance = mockInstance(1);
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
         int threadCount = 10;
@@ -596,7 +603,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchDuplicatePathsRejected()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -614,7 +621,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchInvalidPathFormat()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -630,7 +637,7 @@ class ConfigurationManagerTest
     @Test
     void testPatchEmptyOperationsRejected()
     {
-        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE);
+        ConfigurationManager manager = new ConfigurationManager(provider, BASE_TEMPLATE, tempDir, FailurePolicy.FAIL);
         InstanceMetadata instance = mockInstance(1);
         String baseHash = manager.getEffectiveConfiguration(instance).hash();
 
@@ -639,10 +646,147 @@ class ConfigurationManagerTest
                 .hasMessageContaining("must not be empty");
     }
 
+    // -- Failure policy integration tests --
+
+    @Test
+    void testGetEffectiveConfigurationCachedReadOnlyFallsBackToCache()
+    {
+        ToggleableProvider delegate = new ToggleableProvider();
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationManager manager = new ConfigurationManager(delegate, BASE_TEMPLATE, tempDir,
+                                                                 FailurePolicy.CACHED_READ_ONLY);
+
+        // Seed the overlay and fetch to populate cache
+        JsonObject yaml = new JsonObject().put("concurrent_reads", 128);
+        CassandraConfigurationOverlay overlay = new CassandraConfigurationOverlay(yaml, null);
+        delegate.storeOverlay(instance, null, new ConfigurationOverlaySnapshot(Instant.now(), overlay));
+        ConfigurationOverlaySnapshot first = manager.getEffectiveConfiguration(instance);
+        assertThat(first.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(128);
+
+        // Fail the delegate — should fall back to cached overlay
+        delegate.setFailing(true);
+        ConfigurationOverlaySnapshot cached = manager.getEffectiveConfiguration(instance);
+        assertThat(cached.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(128);
+        assertThat(cached.configuration().cassandraYaml().getString("cluster_name")).isEqualTo("Test Cluster");
+    }
+
+    @Test
+    void testGetEffectiveConfigurationFailPolicyThrows()
+    {
+        ToggleableProvider delegate = new ToggleableProvider();
+        delegate.setFailing(true);
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationManager manager = new ConfigurationManager(delegate, BASE_TEMPLATE, tempDir,
+                                                                 FailurePolicy.FAIL);
+
+        assertThatThrownBy(() -> manager.getEffectiveConfiguration(instance))
+                .isInstanceOf(ConfigurationProviderUnavailableException.class)
+                .hasMessageContaining("FAIL policy");
+    }
+
+    @Test
+    void testPatchCachedReadOnlyRejectsWriteWhenProviderUnavailable()
+    {
+        ToggleableProvider delegate = new ToggleableProvider();
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationManager manager = new ConfigurationManager(delegate, BASE_TEMPLATE, tempDir,
+                                                                 FailurePolicy.CACHED_READ_ONLY);
+
+        // Get the base hash while delegate is up
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        // Fail delegate, then patch should fail
+        delegate.setFailing(true);
+
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 64));
+        assertThatThrownBy(() -> manager.patchConfiguration(instance, baseHash, ops))
+                .isInstanceOf(ConfigurationManagerException.class);
+    }
+
+    @Test
+    void testPatchCachedReadWriteFallsBackToCache()
+    {
+        ToggleableProvider delegate = new ToggleableProvider();
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationManager manager = new ConfigurationManager(delegate, BASE_TEMPLATE, tempDir,
+                                                                 FailurePolicy.CACHED_READ_WRITE);
+
+        // Get the base hash while delegate is up, populate cache
+        String baseHash = manager.getEffectiveConfiguration(instance).hash();
+
+        // Fail delegate, patch should still succeed via cache
+        delegate.setFailing(true);
+        List<ConfigurationPatchOperation> ops = List.of(
+                new ConfigurationPatchOperation(ConfigurationPatchOperation.Op.ADD,
+                                               "/configuration/cassandraYaml/concurrent_reads", 64));
+        ConfigurationOverlaySnapshot result = manager.patchConfiguration(instance, baseHash, ops);
+
+        assertThat(result.configuration().cassandraYaml().getInteger("concurrent_reads")).isEqualTo(64);
+        assertThat(result.configuration().cassandraYaml().getString("cluster_name")).isEqualTo("Test Cluster");
+    }
+
+    @Test
+    void testGetEffectiveConfigurationCachedReadOnlyNoCacheIsUnavailable()
+    {
+        ToggleableProvider delegate = new ToggleableProvider();
+        delegate.setFailing(true);
+        InstanceMetadata instance = mockInstance(1);
+
+        ConfigurationManager manager = new ConfigurationManager(delegate, BASE_TEMPLATE, tempDir,
+                                                                 FailurePolicy.CACHED_READ_ONLY);
+
+        // No cache exists and the provider is down: the overlay is unknown, so the base template
+        // alone is not the effective configuration and must not be passed off as it.
+        assertThatThrownBy(() -> manager.getEffectiveConfiguration(instance))
+                .isInstanceOf(ConfigurationProviderUnavailableException.class)
+                .hasMessageContaining("no overlay is cached");
+    }
+
     private static InstanceMetadata mockInstance(int id)
     {
         InstanceMetadata instance = mock(InstanceMetadata.class);
         when(instance.id()).thenReturn(id);
         return instance;
+    }
+
+    /**
+     * A provider that can be toggled between success and failure modes.
+     */
+    private static class ToggleableProvider implements ConfigurationProvider
+    {
+        private final InMemoryConfigurationProvider inner = new InMemoryConfigurationProvider();
+        private final AtomicBoolean failing = new AtomicBoolean(false);
+
+        void setFailing(boolean fail)
+        {
+            failing.set(fail);
+        }
+
+        @Override
+        public ConfigurationOverlaySnapshot getOverlay(InstanceMetadata instance)
+        {
+            if (failing.get())
+            {
+                throw new UncheckedIOException(new IOException("provider unavailable"));
+            }
+            return inner.getOverlay(instance);
+        }
+
+        @Override
+        public boolean storeOverlay(InstanceMetadata instance, String originalHash,
+                                    @NotNull ConfigurationOverlaySnapshot newSnapshot)
+        {
+            if (failing.get())
+            {
+                throw new UncheckedIOException(new IOException("provider unavailable"));
+            }
+            return inner.storeOverlay(instance, originalHash, newSnapshot);
+        }
     }
 }
