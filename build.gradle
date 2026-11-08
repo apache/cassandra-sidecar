@@ -40,7 +40,7 @@ plugins {
     id 'signing'
 
     // since we're using a specific version here, we delay applying the plugin till the all projects
-    id "com.github.spotbugs" version "6.0.20" apply false
+    id "com.github.spotbugs" version "6.4.5" apply false
 
     // Help resolve dependency conflicts between jib and ospackage
     // See: https://github.com/GoogleContainerTools/jib/issues/4235#issuecomment-2088829367
