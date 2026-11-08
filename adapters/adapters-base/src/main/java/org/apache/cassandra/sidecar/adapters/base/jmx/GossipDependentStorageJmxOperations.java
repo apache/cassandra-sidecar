@@ -129,6 +129,12 @@ public class GossipDependentStorageJmxOperations implements StorageJmxOperations
     }
 
     @Override
+    public Map<List<String>, List<String>> getRangeToWitnessesWithPortMap(String keyspace)
+    {
+        return delegate.getRangeToWitnessesWithPortMap(keyspace);
+    }
+
+    @Override
     public boolean isGossipRunning()
     {
         return delegate.isGossipRunning();

@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.cassandra.sidecar.common.request.TokenRangeReplicasRequest;
 
@@ -88,14 +89,23 @@ public class TokenRangeReplicasResponse
         // inclusive
         private final String end;
         private final Map<String, List<String>> replicasByDatacenter;
+        // null when witness replicas are not reported
+        private final Map<String, List<String>> witnessesByDatacenter;
+
+        public ReplicaInfo(String start, String end, Map<String, List<String>> replicasByDatacenter)
+        {
+            this(start, end, replicasByDatacenter, null);
+        }
 
         public ReplicaInfo(@JsonProperty("start") String start,
                            @JsonProperty("end") String end,
-                           @JsonProperty("replicas") Map<String, List<String>> replicasByDatacenter)
+                           @JsonProperty("replicas") Map<String, List<String>> replicasByDatacenter,
+                           @JsonProperty("witnessesByDatacenter") Map<String, List<String>> witnessesByDatacenter)
         {
             this.start = start;
             this.end = end;
             this.replicasByDatacenter = replicasByDatacenter;
+            this.witnessesByDatacenter = witnessesByDatacenter;
         }
 
         /**
@@ -126,6 +136,18 @@ public class TokenRangeReplicasResponse
         }
 
         /**
+         * @return mapping of datacenter to the replicas in {@link #replicasByDatacenter()} that are witnesses for
+         * the token range, or {@code null} when witness replicas are not reported, either because Cassandra does
+         * not support them or because they are not reported for this kind of replica
+         */
+        @JsonProperty("witnessesByDatacenter")
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public Map<String, List<String>> witnessesByDatacenter()
+        {
+            return witnessesByDatacenter;
+        }
+
+        /**
          * {@inheritDoc}
          */
         @Override
@@ -136,7 +158,8 @@ public class TokenRangeReplicasResponse
             ReplicaInfo that = (ReplicaInfo) o;
             return start.equals(that.start)
                    && end.equals(that.end)
-                   && replicasByDatacenter.equals(that.replicasByDatacenter);
+                   && replicasByDatacenter.equals(that.replicasByDatacenter)
+                   && Objects.equals(witnessesByDatacenter, that.witnessesByDatacenter);
         }
 
         /**
@@ -145,7 +168,7 @@ public class TokenRangeReplicasResponse
         @Override
         public int hashCode()
         {
-            return Objects.hash(start, end, replicasByDatacenter);
+            return Objects.hash(start, end, replicasByDatacenter, witnessesByDatacenter);
         }
 
         /**
@@ -158,6 +181,7 @@ public class TokenRangeReplicasResponse
                    "start='" + start + '\'' +
                    ", end='" + end + '\'' +
                    ", replicasByDatacenter=" + replicasByDatacenter +
+                   ", witnessesByDatacenter=" + witnessesByDatacenter +
                    '}';
         }
     }
