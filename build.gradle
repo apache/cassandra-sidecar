@@ -28,7 +28,7 @@ buildscript {
     dependencies {
         // findBugs needs a newer version of Guava in the buildscript.
         // otherwise it throws an exception
-        classpath "com.google.guava:guava:28.2-jre"
+        classpath "com.google.guava:guava:33.5.0-jre"
     }
 }
 
