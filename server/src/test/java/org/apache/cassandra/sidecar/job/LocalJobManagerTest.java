@@ -20,7 +20,10 @@ package org.apache.cassandra.sidecar.job;
 
 import java.util.Collection;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -156,6 +159,38 @@ class LocalJobManagerTest
         assertThat(manager.removeJob(OPERATION_ID, NODE_ID_1, job1)).isTrue();
         assertThat(manager.getJob(OPERATION_ID, NODE_ID_1)).isNull();
         assertThat(manager.getJob(otherOperationId, NODE_ID_1)).isSameAs(job2);
+    }
+
+    @Test
+    void testJobsSubmittedFromSameContextRunConcurrently()
+    {
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        LocalJob blockingJob = new LocalJob(OPERATION_ID, NODE_ID_1, "127.0.0.1", OperationType.DRAIN)
+        {
+            @Override
+            protected void executeInternal()
+            {
+                Uninterruptibles.awaitUninterruptibly(releaseFirst, 30, TimeUnit.SECONDS);
+            }
+        };
+        LocalJob secondJob = createTestJob(NODE_ID_2);
+
+        try
+        {
+            vertx.getOrCreateContext().runOnContext(v -> {
+                manager.submitJob(blockingJob);
+                manager.submitJob(secondJob);
+            });
+
+            loopAssert(5, () -> {
+                assertThat(blockingJob.status()).isEqualTo(OperationalJobStatus.RUNNING);
+                assertThat(secondJob.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+            });
+        }
+        finally
+        {
+            releaseFirst.countDown();
+        }
     }
 
     private static LocalJob createTestJob(UUID nodeId)

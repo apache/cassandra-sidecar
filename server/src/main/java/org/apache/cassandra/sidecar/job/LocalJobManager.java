@@ -60,7 +60,7 @@ public class LocalJobManager
         {
             return Future.succeededFuture();
         }
-        return internalExecutorPool.executeBlocking(job::execute).mapEmpty();
+        return internalExecutorPool.executeBlocking(job::execute, false).mapEmpty();
     }
 
     /**
