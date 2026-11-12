@@ -454,7 +454,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     private long resolveNodeExecutionTimeoutMs(OperationType operationType)
     {
         SecondBoundConfiguration override = factoryFor(operationType).nodeExecutionTimeout();
-        return override != null ? override.toMillis() : defaultNodeExecutionTimeoutMs;
+        return override != null && override.toMillis() > 0 ? override.toMillis() : defaultNodeExecutionTimeoutMs;
     }
 
     /**

@@ -397,6 +397,20 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testZeroNodeExecutionTimeoutOverrideFallsBackToDefault()
+    {
+        localJobFactory = new TestLocalJobFactory().withNodeExecutionTimeout("0s");
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+
+        executeAndWait();
+
+        assertThat(localJobManager.getJob(OPERATION_ID, NODE_1)).isNotNull();
+        verify(storageProvider, timeout(5000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+    }
+
+    @Test
     void testJobNotSubmittedWhenRunningStatusCannotBeWritten()
     {
         buildCoordinator();
@@ -993,6 +1007,7 @@ class StorageBackedLocalJobCoordinatorTest
         private boolean canRecover;
         private boolean requiresPredecessorSuccess;
         private SecondBoundConfiguration waitBetweenExecutionGroups;
+        private SecondBoundConfiguration nodeExecutionTimeout;
 
         TestLocalJobFactory withCanRecover()
         {
@@ -1009,6 +1024,12 @@ class StorageBackedLocalJobCoordinatorTest
         TestLocalJobFactory withWaitBetweenExecutionGroups(String wait)
         {
             waitBetweenExecutionGroups = SecondBoundConfiguration.parse(wait);
+            return this;
+        }
+
+        TestLocalJobFactory withNodeExecutionTimeout(String timeout)
+        {
+            nodeExecutionTimeout = SecondBoundConfiguration.parse(timeout);
             return this;
         }
 
@@ -1040,6 +1061,12 @@ class StorageBackedLocalJobCoordinatorTest
         public SecondBoundConfiguration waitBetweenExecutionGroups(Map<String, String> operationMetadata)
         {
             return waitBetweenExecutionGroups;
+        }
+
+        @Override
+        public SecondBoundConfiguration nodeExecutionTimeout()
+        {
+            return nodeExecutionTimeout;
         }
     }
 
