@@ -65,11 +65,12 @@ public class OperationalJobConfigurationImpl implements OperationalJobConfigurat
     @JsonProperty(value = "tables_ttl")
     public void setTablesTtl(SecondBoundConfiguration tablesTtl)
     {
-        if (tablesTtl != null && tablesTtl.compareTo(MIN_TABLES_TTL) < 0)
+        SecondBoundConfiguration value = tablesTtl != null ? tablesTtl : DEFAULT_TABLES_TTL;
+        if (value.compareTo(MIN_TABLES_TTL) < 0)
         {
             throw new IllegalArgumentException("tables_ttl cannot be less than " + MIN_TABLES_TTL);
         }
-        this.tablesTtl = tablesTtl;
+        this.tablesTtl = value;
     }
 
     @Override
@@ -95,11 +96,14 @@ public class OperationalJobConfigurationImpl implements OperationalJobConfigurat
     @JsonProperty(value = "local_job_coordination_delay")
     public void setLocalJobCoordinationDelay(SecondBoundConfiguration localJobCoordinationDelay)
     {
-        if (localJobCoordinationDelay != null && localJobCoordinationDelay.toSeconds() <= 0)
+        SecondBoundConfiguration value = localJobCoordinationDelay != null
+                                         ? localJobCoordinationDelay
+                                         : DEFAULT_LOCAL_JOB_COORDINATION_DELAY;
+        if (value.toSeconds() <= 0)
         {
             throw new IllegalArgumentException("local_job_coordination_delay must be greater than 0");
         }
-        this.localJobCoordinationDelay = localJobCoordinationDelay;
+        this.localJobCoordinationDelay = value;
     }
 
     @Override
@@ -112,11 +116,14 @@ public class OperationalJobConfigurationImpl implements OperationalJobConfigurat
     @JsonProperty(value = "node_execution_timeout")
     public void setNodeExecutionTimeout(SecondBoundConfiguration nodeExecutionTimeout)
     {
-        if (nodeExecutionTimeout != null && nodeExecutionTimeout.toSeconds() <= 0)
+        SecondBoundConfiguration value = nodeExecutionTimeout != null
+                                         ? nodeExecutionTimeout
+                                         : DEFAULT_NODE_EXECUTION_TIMEOUT;
+        if (value.toSeconds() <= 0)
         {
             throw new IllegalArgumentException("node_execution_timeout must be greater than 0");
         }
-        this.nodeExecutionTimeout = nodeExecutionTimeout;
+        this.nodeExecutionTimeout = value;
     }
 
     @Override

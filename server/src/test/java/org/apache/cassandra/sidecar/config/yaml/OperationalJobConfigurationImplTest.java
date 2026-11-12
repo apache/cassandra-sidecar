@@ -18,9 +18,12 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.OperationalJobConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -39,6 +42,22 @@ class OperationalJobConfigurationImplTest
         assertThat(config.localJobCoordinationDelay()).isEqualTo(SecondBoundConfiguration.parse("3m"));
         assertThat(config.nodeExecutionTimeout()).isEqualTo(SecondBoundConfiguration.parse("10m"));
         assertThat(config.durableTrackingEnabled()).isFalse();
+    }
+
+    @Test
+    void testEmptyYamlValuesUseDefaults() throws IOException
+    {
+        String yaml = "operational_job:\n"
+                      + "  tables_ttl:\n"
+                      + "  local_job_coordination_delay:\n"
+                      + "  node_execution_timeout:\n";
+
+        OperationalJobConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml)
+                                                                     .operationalJobConfiguration();
+
+        assertThat(config.tablesTtl()).isEqualTo(SecondBoundConfiguration.parse("90d"));
+        assertThat(config.localJobCoordinationDelay()).isEqualTo(SecondBoundConfiguration.parse("3m"));
+        assertThat(config.nodeExecutionTimeout()).isEqualTo(SecondBoundConfiguration.parse("10m"));
     }
 
     @Test
