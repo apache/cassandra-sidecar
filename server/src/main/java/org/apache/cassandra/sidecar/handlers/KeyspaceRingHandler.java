@@ -19,6 +19,8 @@
 package org.apache.cassandra.sidecar.handlers;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
@@ -89,10 +91,18 @@ public class KeyspaceRingHandler extends AbstractHandler<Name> implements Access
      */
     private RingResponse withSidecarInstanceIds(RingResponse response)
     {
+        // With vnodes a node appears once per token, so resolve each address only once.
+        // Null (unmanaged) results must be cached too, which computeIfAbsent would not do.
+        Map<String, Integer> sidecarInstanceIdByAddress = new HashMap<>();
         RingResponse enriched = new RingResponse(response.size());
         for (RingEntry entry : response)
         {
-            Integer sidecarInstanceId = metadataFetcher.sidecarInstanceId(entry.address());
+            String address = entry.address();
+            if (!sidecarInstanceIdByAddress.containsKey(address))
+            {
+                sidecarInstanceIdByAddress.put(address, metadataFetcher.sidecarInstanceId(address));
+            }
+            Integer sidecarInstanceId = sidecarInstanceIdByAddress.get(address);
             enriched.add(new RingEntry.Builder()
                          .datacenter(entry.datacenter())
                          .address(entry.address())

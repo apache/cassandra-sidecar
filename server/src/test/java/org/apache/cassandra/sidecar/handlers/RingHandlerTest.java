@@ -70,6 +70,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -81,14 +83,15 @@ class RingHandlerTest
     static final Logger LOGGER = LoggerFactory.getLogger(RingHandlerTest.class);
     Vertx vertx;
     Server server;
+    Injector injector;
 
     @BeforeEach
     void before() throws InterruptedException
     {
         Module testOverride = Modules.override(new TestModule())
                                      .with(new RingHandlerTestModule());
-        Injector injector = Guice.createInjector(Modules.override(SidecarModules.all())
-                                                        .with(testOverride));
+        injector = Guice.createInjector(Modules.override(SidecarModules.all())
+                                               .with(testOverride));
         vertx = injector.getInstance(Vertx.class);
         server = injector.getInstance(Server.class);
         VertxTestContext context = new VertxTestContext();
@@ -170,6 +173,55 @@ class RingHandlerTest
                       }
                   }
 
+                  context.completeNow();
+              }));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "/api/v1/cassandra/ring", "/api/v1/cassandra/ring/keyspaces/test_keyspace" })
+    void testGetRingResolvesSidecarInstanceIdOncePerAddress(String testRoute, VertxTestContext context)
+    {
+        int nodeCount = 3;
+        int tokensPerNode = 4;
+        RingHandlerTestModule.ringSupplier = () -> {
+            RingResponse response = new RingResponse(nodeCount * tokensPerNode);
+            for (int token = 1; token <= nodeCount * tokensPerNode; token++)
+            {
+                int node = (token - 1) % nodeCount + 1;
+                response.add(new RingEntry.Builder()
+                             .address("127.0.0." + node)
+                             .hostId("hostId" + node)
+                             .datacenter("dc1")
+                             .state("Normal")
+                             .status("Up")
+                             .token(String.valueOf(token))
+                             .build());
+            }
+            return response;
+        };
+        InstancesMetadata instancesMetadata = injector.getInstance(InstancesMetadata.class);
+        WebClient client = WebClient.create(vertx);
+        client.get(server.actualPort(), "127.0.0.1", testRoute)
+              .expect(ResponsePredicate.SC_OK)
+              .send(context.succeeding(response -> {
+                  RingResponse ringResponse = response.bodyAsJson(RingResponse.class);
+                  assertThat(ringResponse).isNotNull()
+                                          .hasSize(nodeCount * tokensPerNode);
+                  for (RingEntry entry : ringResponse)
+                  {
+                      if ("127.0.0.1".equals(entry.address()))
+                      {
+                          assertThat(entry.sidecarInstanceId()).isEqualTo(100);
+                      }
+                      else
+                      {
+                          assertThat(entry.sidecarInstanceId()).isNull();
+                      }
+                  }
+                  // Each node appears once per token but must be resolved only once. 127.0.0.1 is not
+                  // verified because it is also resolved while routing the request.
+                  verify(instancesMetadata, times(1)).instanceFromHost("127.0.0.2");
+                  verify(instancesMetadata, times(1)).instanceFromHost("127.0.0.3");
                   context.completeNow();
               }));
     }
