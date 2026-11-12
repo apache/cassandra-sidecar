@@ -21,6 +21,7 @@ package org.apache.cassandra.sidecar.job;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -81,6 +82,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     // When this Sidecar first saw a group's predecessors all reach a terminal state, keyed by operation and group.
     private final Map<GroupKey, Long> predecessorsCompletedAtNanos = new ConcurrentHashMap<>();
     private final Map<NodeKey, OperationalJobStatus> decidedTerminalStatuses = new ConcurrentHashMap<>();
+    private final Set<NodeKey> timedOutNodes = ConcurrentHashMap.newKeySet();
     private final DurationSpec randomizedInitialDelay;
     private final ExecutorPools executorPools;
     private final TimeProvider timeProvider;
@@ -259,6 +261,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
 
             if (localJobManager.getJob(operationId, hostId) != null)
             {
+                warnIfTimedOutJobStillRunning(operationId, hostId);
                 reportDecidedTerminalStatusAgain(operationId, hostId);
                 continue;
             }
@@ -371,42 +374,49 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             return;
         }
 
-        // Bound every RUNNING node so a hanging job can't stall the operation. Whichever of execution completes or
-        // timeout fires happens first reports the terminal status, the other is a no-op via terminalReported to avoid
-        // a race condition between the two.
+        // Bound every RUNNING node. On timeout the job is only cancelled, because cancel() does not stop a running
+        // job. The terminal status is the job's own outcome, written when the job stops, so other Sidecars do not
+        // treat the node as done while its job still runs.
         // Failing jobs when Sidecar is permanently down will be handled by (https://issues.apache.org/jira/browse/CASSSIDECAR-485).
-        AtomicBoolean terminalReported = new AtomicBoolean(false);
+        NodeKey nodeKey = new NodeKey(operationId, hostId);
+        AtomicBoolean stoppedOrTimedOut = new AtomicBoolean(false);
         long timeoutMs = resolveNodeExecutionTimeoutMs(operationType);
         long timerId = executorPools.internal().setTimer(timeoutMs, id -> {
-            if (terminalReported.compareAndSet(false, true))
+            timedOutNodes.add(nodeKey);
+            if (!stoppedOrTimedOut.compareAndSet(false, true))
             {
-                decidedTerminalStatuses.put(new NodeKey(operationId, hostId), OperationalJobStatus.FAILED);
-                LOGGER.warn("Node {} exceeded execution timeout of {}ms — marking as FAILED and cancelling the job. "
-                            + "operationId={}", hostId, timeoutMs, operationId);
-                reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
-                localJob.cancel();
+                timedOutNodes.remove(nodeKey);
+                return;
             }
+            LOGGER.warn("Node {} exceeded execution timeout of {}ms — cancelling the job. Its status is written "
+                        + "when the job stops. operationId={}", hostId, timeoutMs, operationId);
+            localJob.cancel();
         });
 
         localJobManager.submitJob(localJob).onComplete(ar -> executorPools.internal().runBlocking(() -> {
             executorPools.internal().cancelTimer(timerId);
-            if (terminalReported.compareAndSet(false, true))
+            stoppedOrTimedOut.set(true);
+            timedOutNodes.remove(nodeKey);
+            boolean failed = ar.failed();
+            OperationalJobStatus terminalStatus = failed ? OperationalJobStatus.FAILED : OperationalJobStatus.SUCCEEDED;
+            decidedTerminalStatuses.put(nodeKey, terminalStatus);
+            reportTerminalNodeStatusWithRetry(operationId, hostId, terminalStatus, 1);
+            if (failed)
             {
-                boolean failed = ar.failed();
-                OperationalJobStatus terminalStatus = failed ? OperationalJobStatus.FAILED : OperationalJobStatus.SUCCEEDED;
-                decidedTerminalStatuses.put(new NodeKey(operationId, hostId), terminalStatus);
-                reportTerminalNodeStatusWithRetry(operationId, hostId, terminalStatus, 1);
-                if (failed)
-                {
-                    LOGGER.error("Local job failed for node {}. operationId={}", hostId, operationId, ar.cause());
-                    recoverFailedNode(localJob, operationId, hostId);
-                }
-            }
-            else
-            {
+                LOGGER.error("Local job failed for node {}. operationId={}", hostId, operationId, ar.cause());
                 recoverFailedNode(localJob, operationId, hostId);
             }
         }));
+    }
+
+    private void warnIfTimedOutJobStillRunning(UUID operationId, UUID hostId)
+    {
+        if (timedOutNodes.contains(new NodeKey(operationId, hostId)))
+        {
+            LOGGER.warn("Node {} exceeded its execution timeout. Cancellation was requested, but its job is still "
+                        + "running. The coordinator cannot finish the operation or release its lock until the job "
+                        + "stops. operationId={}", hostId, operationId);
+        }
     }
 
     private void reportDecidedTerminalStatusAgain(UUID operationId, UUID hostId)
@@ -734,6 +744,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     {
         predecessorsCompletedAtNanos.keySet().removeIf(key -> key.operationId.equals(operationId));
         decidedTerminalStatuses.keySet().removeIf(key -> key.operationId.equals(operationId));
+        timedOutNodes.removeIf(key -> key.operationId.equals(operationId));
         cleanupJobsForOperation(operationId);
     }
 
@@ -744,6 +755,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
     {
         predecessorsCompletedAtNanos.clear();
         decidedTerminalStatuses.clear();
+        timedOutNodes.clear();
         for (LocalJob job : localJobManager.activeJobs())
         {
             localJobManager.removeJob(job.operationId(), job.nodeId(), job);

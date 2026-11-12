@@ -29,8 +29,10 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.google.common.util.concurrent.Uninterruptibles;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -622,28 +624,102 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
-    void testTimeoutOutcomeIsReportedAgainEvenIfJobLaterSucceeds() throws InterruptedException
+    void testJobThatSucceedsAfterTimeoutIsReportedSucceeded()
     {
-        CountDownLatch release = new CountDownLatch(1);
-        CountDownLatch finished = new CountDownLatch(1);
+        AtomicBoolean recovered = new AtomicBoolean(false);
         localJobFactory = (opId, nodeId, host, opType) -> new LocalJob(opId, nodeId, host, opType)
         {
             @Override
             protected void executeInternal()
             {
-                try
-                {
-                    release.await();
-                }
-                catch (InterruptedException e)
-                {
-                    Thread.currentThread().interrupt();
-                }
-                finally
-                {
-                    finished.countDown();
-                }
+                awaitCancellation(this);
             }
+
+            @Override
+            public Future<Void> onJobFailed()
+            {
+                recovered.set(true);
+                return Future.succeededFuture();
+            }
+        };
+        buildCoordinator(OperationalJobConfigurationImpl.builder()
+                                                        .nodeExecutionTimeout(SecondBoundConfiguration.parse("1s"))
+                                                        .build());
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+
+        executeAndWait();
+
+        verify(storageProvider, timeout(3000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+        verify(storageProvider, after(500).never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        assertThat(recovered.get()).isFalse();
+    }
+
+    @Test
+    void testTimedOutJobStatusIsWrittenOnlyAfterItStops() throws InterruptedException
+    {
+        CountDownLatch cancelled = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        CountDownLatch recovered = new CountDownLatch(1);
+        localJobFactory = (opId, nodeId, host, opType) -> new LocalJob(opId, nodeId, host, opType)
+        {
+            @Override
+            protected void executeInternal()
+            {
+                awaitCancellation(this);
+                cancelled.countDown();
+                Uninterruptibles.awaitUninterruptibly(release, 30, TimeUnit.SECONDS);
+                throw new RuntimeException("cancelled");
+            }
+
+            @Override
+            public Future<Void> onJobFailed()
+            {
+                recovered.countDown();
+                return Future.succeededFuture();
+            }
+        };
+        buildCoordinator(OperationalJobConfigurationImpl.builder()
+                                                        .nodeExecutionTimeout(SecondBoundConfiguration.parse("1s"))
+                                                        .build());
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+
+        try
+        {
+            executeAndWait();
+            assertThat(cancelled.await(5, TimeUnit.SECONDS)).isTrue();
+            verify(storageProvider, after(500).never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+            verify(storageProvider, never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+            assertThat(recovered.getCount()).isEqualTo(1);
+        }
+        finally
+        {
+            release.countDown();
+        }
+
+        verify(storageProvider, timeout(3000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+        assertThat(recovered.await(5, TimeUnit.SECONDS)).isTrue();
+    }
+
+    @Test
+    void testPollWhileTimedOutJobIsStillRunningWritesNothing() throws InterruptedException
+    {
+        CountDownLatch cancelled = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger createdJobs = new AtomicInteger();
+        localJobFactory = (opId, nodeId, host, opType) -> {
+            createdJobs.incrementAndGet();
+            return new LocalJob(opId, nodeId, host, opType)
+            {
+                @Override
+                protected void executeInternal()
+                {
+                    awaitCancellation(this);
+                    cancelled.countDown();
+                    Uninterruptibles.awaitUninterruptibly(release, 30, TimeUnit.SECONDS);
+                }
+            };
         };
         buildCoordinator(OperationalJobConfigurationImpl.builder()
                                                         .nodeExecutionTimeout(SecondBoundConfiguration.parse("1s"))
@@ -651,20 +727,21 @@ class StorageBackedLocalJobCoordinatorTest
         setupSingleNodeInstance(NODE_1, "127.0.0.1");
         Map<UUID, OperationalJobStatus> statuses = new HashMap<>();
         stubActiveOperation(createJobRecord(group(NODE_1)), statuses);
-        doThrow(new StorageProviderException("Failed to update node status"))
-        .when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
 
-        executeAndWait();
-        verify(storageProvider, timeout(3000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
-        release.countDown();
-        assertThat(finished.await(5, TimeUnit.SECONDS)).isTrue();
+        try
+        {
+            executeAndWait();
+            assertThat(cancelled.await(5, TimeUnit.SECONDS)).isTrue();
+            statuses.put(NODE_1, OperationalJobStatus.RUNNING);
+            executeAndWait();
 
-        statuses.put(NODE_1, OperationalJobStatus.RUNNING);
-        doNothing().when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
-        executeAndWait();
-
-        verify(storageProvider, times(2)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
-        verify(storageProvider, never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+            verify(storageProvider, times(1)).updateNodeStatus(eq(OPERATION_ID), eq(NODE_1), any());
+            assertThat(createdJobs.get()).isEqualTo(1);
+        }
+        finally
+        {
+            release.countDown();
+        }
     }
 
     @Test
@@ -1079,6 +1156,15 @@ class StorageBackedLocalJobCoordinatorTest
             }
             return new TestLocalJobFactory().createJob(opId, nodeId, host, opType);
         };
+    }
+
+    private static void awaitCancellation(LocalJob job)
+    {
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(30);
+        while (!job.isCancelled() && System.nanoTime() < deadline)
+        {
+            Uninterruptibles.sleepUninterruptibly(20, TimeUnit.MILLISECONDS);
+        }
     }
 
     private static List<UUID> group(UUID... nodeIds)
