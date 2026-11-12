@@ -192,6 +192,9 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         OperationalJobRecord jobRecord = storageProvider.findJob(operationId);
         if (jobRecord == null)
         {
+            LOGGER.warn("No job record found for active operation. The record may not be saved yet, or saving it "
+                        + "failed. If this repeats on later polls, the coordinator cannot finish the operation or "
+                        + "release its lock. operationType={} operationId={}", operationType, operationId);
             return;
         }
 

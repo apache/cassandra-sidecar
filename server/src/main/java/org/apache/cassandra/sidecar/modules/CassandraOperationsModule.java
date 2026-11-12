@@ -136,6 +136,13 @@ public class CassandraOperationsModule extends AbstractModule
 
     static void validateOperationalJobConfiguration(OperationalJobConfiguration config, boolean schemaEnabled)
     {
+        if (config.coordinationEnabled() && !config.durableTrackingEnabled())
+        {
+            throw new IllegalArgumentException(
+            "Invalid operational_job configuration: coordination_enabled requires durable_tracking_enabled to be true, "
+            + "because the coordinator reads the job records and node statuses stored by durable tracking");
+        }
+
         if (schemaEnabled)
         {
             return;

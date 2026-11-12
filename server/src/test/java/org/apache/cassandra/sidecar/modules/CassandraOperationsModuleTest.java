@@ -58,9 +58,25 @@ class CassandraOperationsModuleTest
     void failsWhenSchemaDisabledButCoordinationOn()
     {
         assertThatIllegalArgumentException()
-        .isThrownBy(() -> CassandraOperationsModule.validateOperationalJobConfiguration(config(true, false), false))
+        .isThrownBy(() -> CassandraOperationsModule.validateOperationalJobConfiguration(config(true, true), false))
         .withMessageContaining("sidecar.schema.is_enabled")
         .withMessageContaining("coordination_enabled");
+    }
+
+    @Test
+    void failsWhenCoordinationOnButDurableTrackingOff()
+    {
+        assertThatIllegalArgumentException()
+        .isThrownBy(() -> CassandraOperationsModule.validateOperationalJobConfiguration(config(true, false), true))
+        .withMessageContaining("coordination_enabled")
+        .withMessageContaining("durable_tracking_enabled");
+    }
+
+    @Test
+    void passesWhenDurableTrackingOnWithoutCoordination()
+    {
+        assertThatCode(() -> CassandraOperationsModule.validateOperationalJobConfiguration(
+        config(false, true), true)).doesNotThrowAnyException();
     }
 
     private static OperationalJobConfiguration config(boolean coordinationEnabled, boolean durableTrackingEnabled)
