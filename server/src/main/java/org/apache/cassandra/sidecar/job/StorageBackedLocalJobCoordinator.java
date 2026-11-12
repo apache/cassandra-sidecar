@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.job;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -160,9 +161,9 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             }
 
             Map<OperationType, UUID> activeOps = operationalJobCoordinator.getActiveOperations();
+            pruneInactiveOperationState(new HashSet<>(activeOps.values()));
             if (activeOps.isEmpty())
             {
-                resetState();
                 promise.complete();
                 return;
             }
@@ -755,17 +756,17 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         cleanupJobsForOperation(operationId);
     }
 
-    /**
-     * Clears all local state. Only safe when no operations are active
-     */
-    private void resetState()
+    private void pruneInactiveOperationState(Set<UUID> activeOperationIds)
     {
-        predecessorsCompletedAtNanos.clear();
-        decidedTerminalStatuses.clear();
-        timedOutNodes.clear();
+        predecessorsCompletedAtNanos.keySet().removeIf(key -> !activeOperationIds.contains(key.operationId));
+        decidedTerminalStatuses.keySet().removeIf(key -> !activeOperationIds.contains(key.operationId));
+        timedOutNodes.removeIf(key -> !activeOperationIds.contains(key.operationId));
         for (LocalJob job : localJobManager.activeJobs())
         {
-            localJobManager.removeJob(job.operationId(), job.nodeId(), job);
+            if (!activeOperationIds.contains(job.operationId()) && job.status().isCompleted())
+            {
+                localJobManager.removeJob(job.operationId(), job.nodeId(), job);
+            }
         }
     }
 }

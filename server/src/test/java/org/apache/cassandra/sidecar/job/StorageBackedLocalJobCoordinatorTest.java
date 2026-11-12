@@ -955,6 +955,75 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testCompletedJobOfOperationFinalizedElsewhereIsPrunedWhileOtherOperationsAreActive()
+    {
+        buildCoordinator();
+        UUID repairOperationId = UUIDs.timeBased();
+        OperationalJobRecord drainJob = createJobRecord(group(NODE_1));
+        OperationalJobRecord repairJob = OperationalJobRecord.builder()
+                                                             .jobId(repairOperationId)
+                                                             .operationType(OperationType.REPAIR)
+                                                             .status(OperationalJobStatus.RUNNING)
+                                                             .nodeExecutionOrder(Collections.singletonList(group(NODE_2)))
+                                                             .build();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        Map<OperationType, UUID> bothActive = new HashMap<>();
+        bothActive.put(OperationType.DRAIN, OPERATION_ID);
+        bothActive.put(OperationType.REPAIR, repairOperationId);
+        when(storageProvider.isAvailable()).thenReturn(true);
+        when(operationalJobCoordinator.getActiveOperations())
+        .thenReturn(bothActive)
+        .thenReturn(Collections.singletonMap(OperationType.REPAIR, repairOperationId));
+        when(storageProvider.findJob(OPERATION_ID)).thenReturn(drainJob);
+        when(storageProvider.findJob(repairOperationId)).thenReturn(repairJob);
+        when(storageProvider.getNodeStatusesForOperation(OPERATION_ID)).thenReturn(new HashMap<>());
+        when(storageProvider.getNodeStatusesForOperation(repairOperationId)).thenReturn(new HashMap<>());
+
+        executeAndWait();
+        verify(storageProvider, timeout(1000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+        assertThat(localJobManager.getJob(OPERATION_ID, NODE_1)).isNotNull();
+
+        executeAndWait();
+
+        assertThat(localJobManager.getJob(OPERATION_ID, NODE_1)).isNull();
+    }
+
+    @Test
+    void testRunningJobIsKeptUntilItCompletesWhenNoOperationsAreActive()
+    {
+        CountDownLatch release = new CountDownLatch(1);
+        localJobFactory = (opId, nodeId, host, opType) -> new LocalJob(opId, nodeId, host, opType)
+        {
+            @Override
+            protected void executeInternal()
+            {
+                Uninterruptibles.awaitUninterruptibly(release, 30, TimeUnit.SECONDS);
+            }
+        };
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+
+        try
+        {
+            executeAndWait();
+            when(operationalJobCoordinator.getActiveOperations()).thenReturn(Collections.emptyMap());
+            executeAndWait();
+
+            assertThat(localJobManager.getJob(OPERATION_ID, NODE_1)).isNotNull();
+        }
+        finally
+        {
+            release.countDown();
+        }
+
+        verify(storageProvider, timeout(1000)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.SUCCEEDED);
+        executeAndWait();
+
+        assertThat(localJobManager.getJob(OPERATION_ID, NODE_1)).isNull();
+    }
+
+    @Test
     void testStorageErrorOnOneOperationDoesNotSkipOtherOperations()
     {
         buildCoordinator();
