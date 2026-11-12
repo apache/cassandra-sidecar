@@ -33,6 +33,7 @@ import org.junit.jupiter.api.io.TempDir;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
 import org.apache.cassandra.sidecar.common.server.utils.MillisecondBoundConfiguration;
+import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.MetricsFilteringConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.exceptions.ConfigurationException;
@@ -130,6 +131,21 @@ class SidecarConfigurationTest
         .isEqualTo("(\\.db|TOC\\.txt)");
         assertThat(validationConfiguration.allowedPatternForSnapshotName())
         .isEqualTo(".*");
+    }
+
+    @Test
+    void testReadingOperationalJobConfiguration() throws IOException
+    {
+        Path yamlPath = yaml("config/sidecar_operational_job.yaml");
+        SidecarConfiguration config = SidecarConfigurationImpl.readYamlConfiguration(yamlPath);
+
+        OperationalJobConfiguration operationalJob = config.operationalJobConfiguration();
+        assertThat(operationalJob).isNotNull();
+        assertThat(operationalJob.tablesTtl()).isEqualTo(SecondBoundConfiguration.parse("30d"));
+        assertThat(operationalJob.coordinationEnabled()).isFalse();
+        assertThat(operationalJob.localJobCoordinationDelay()).isEqualTo(SecondBoundConfiguration.parse("90s"));
+        assertThat(operationalJob.nodeExecutionTimeout()).isEqualTo(SecondBoundConfiguration.parse("20m"));
+        assertThat(operationalJob.durableTrackingEnabled()).isTrue();
     }
 
     @Test
