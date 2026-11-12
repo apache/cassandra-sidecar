@@ -251,6 +251,13 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                 continue;
             }
 
+            OperationalJobStatus decidedStatus = decidedTerminalStatuses.get(new NodeKey(operationId, hostId));
+            if (decidedStatus != null)
+            {
+                reportDecidedTerminalStatusAgain(operationId, hostId, decidedStatus);
+                continue;
+            }
+
             // If the job is RUNNING but we don't have a local handle, Sidecar might have crashed
             if (currentStatus == OperationalJobStatus.RUNNING && localJobManager.getJob(operationId, hostId) == null)
             {
@@ -262,7 +269,6 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
             if (localJobManager.getJob(operationId, hostId) != null)
             {
                 warnIfTimedOutJobStillRunning(operationId, hostId);
-                reportDecidedTerminalStatusAgain(operationId, hostId);
                 continue;
             }
 
@@ -273,7 +279,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
                 {
                     LOGGER.warn("Predecessor failed and operation requires predecessor success — marking node {} " +
                                 "as FAILED. operationId={}", hostId, operationId);
-                    reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
+                    decideFailed(operationId, hostId);
                 }
                 // Else, a predecessor is still running, so wait for the next poll
                 continue;
@@ -351,7 +357,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         {
             LOGGER.warn("Node {} cannot recover from RUNNING state — marking as FAILED. operationId={}",
                          hostId, operationId);
-            reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
+            decideFailed(operationId, hostId);
             LocalJob job = tryCreateJob(operationId, operationType, hostId, host, operationMetadata);
             if (job != null)
             {
@@ -366,7 +372,7 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         LocalJob localJob = tryCreateJob(operationId, operationType, hostId, host, operationMetadata);
         if (localJob == null)
         {
-            reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
+            decideFailed(operationId, hostId);
             return;
         }
         if (!reportNonTerminalNodeStatus(operationId, hostId, OperationalJobStatus.RUNNING))
@@ -419,14 +425,15 @@ public class StorageBackedLocalJobCoordinator implements LocalJobCoordinator, Pe
         }
     }
 
-    private void reportDecidedTerminalStatusAgain(UUID operationId, UUID hostId)
+    private void decideFailed(UUID operationId, UUID hostId)
     {
-        OperationalJobStatus decided = decidedTerminalStatuses.get(new NodeKey(operationId, hostId));
-        if (decided == null)
-        {
-            return;
-        }
-        LOGGER.warn("Node {} finished as {} but storage does not show a terminal status. Reporting it again. "
+        decidedTerminalStatuses.put(new NodeKey(operationId, hostId), OperationalJobStatus.FAILED);
+        reportTerminalNodeStatusWithRetry(operationId, hostId, OperationalJobStatus.FAILED, 1);
+    }
+
+    private void reportDecidedTerminalStatusAgain(UUID operationId, UUID hostId, OperationalJobStatus decided)
+    {
+        LOGGER.warn("Node {} is decided as {}, but storage does not show a terminal status. Reporting it again. "
                     + "operationId={}", hostId, decided, operationId);
         try
         {

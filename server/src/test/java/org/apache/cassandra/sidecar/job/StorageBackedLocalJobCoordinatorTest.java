@@ -339,6 +339,31 @@ class StorageBackedLocalJobCoordinatorTest
     }
 
     @Test
+    void testFailedWriteAfterCreateJobFailureIsReportedAgainWithoutCreatingTheJob()
+    {
+        AtomicInteger createAttempts = new AtomicInteger();
+        localJobFactory = (opId, nodeId, host, opType) -> {
+            if (createAttempts.incrementAndGet() == 1)
+            {
+                throw new IllegalStateException("Cannot create job for node " + nodeId);
+            }
+            return new TestLocalJobFactory().createJob(opId, nodeId, host, opType);
+        };
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), new HashMap<>());
+        doThrow(new StorageProviderException("Failed to update node status"))
+        .when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+
+        executeAndWait();
+        executeAndWait();
+
+        assertThat(createAttempts.get()).isEqualTo(1);
+        verify(storageProvider, never()).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.RUNNING);
+        verify(storageProvider, times(2)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+    }
+
+    @Test
     void testArePredecessorsCompleteBlocksWhenRequiresPredecessorSuccessTrue()
     {
         buildCoordinator();
@@ -835,6 +860,37 @@ class StorageBackedLocalJobCoordinatorTest
 
         verify(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
         assertThat(onJobFailedInvoked).isTrue();
+    }
+
+    @Test
+    void testFailedWriteAfterCrashRecoveryIsReportedAgainWithoutRunningOnJobFailedAgain()
+    {
+        AtomicInteger onJobFailedCalls = new AtomicInteger();
+        localJobFactory = (opId, nodeId, host, opType) -> new LocalJob(opId, nodeId, host, opType)
+        {
+            @Override
+            protected void executeInternal()
+            {
+            }
+
+            @Override
+            public Future<Void> onJobFailed()
+            {
+                onJobFailedCalls.incrementAndGet();
+                return Future.succeededFuture();
+            }
+        };
+        buildCoordinator();
+        setupSingleNodeInstance(NODE_1, "127.0.0.1");
+        stubActiveOperation(createJobRecord(group(NODE_1)), statuses(NODE_1, OperationalJobStatus.RUNNING));
+        doThrow(new StorageProviderException("Failed to update node status"))
+        .when(storageProvider).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
+
+        executeAndWait();
+        executeAndWait();
+
+        assertThat(onJobFailedCalls.get()).isEqualTo(1);
+        verify(storageProvider, times(2)).updateNodeStatus(OPERATION_ID, NODE_1, OperationalJobStatus.FAILED);
     }
 
     @Test
