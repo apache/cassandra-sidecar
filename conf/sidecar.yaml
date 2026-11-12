@@ -459,6 +459,10 @@ blob_restore:
   slow_task_threshold: 10m
   slow_task_report_delay: 1m
   ring_topology_refresh_delay: 1m
+  # Restricts which credential modes restore jobs may use. A restore job whose credentialType is not in
+  # this list is rejected at creation time with an HTTP 400. Useful in multi-tenant IAM-only environments
+  # to prevent clients from supplying long-lived static credentials. By default, both are allowed.
+  allowed_credential_types: [STATIC, IAM]
 
 s3_client:
   concurrency: 4

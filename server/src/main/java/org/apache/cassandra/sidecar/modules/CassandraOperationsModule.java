@@ -322,7 +322,8 @@ public class CassandraOperationsModule extends AbstractModule
     @GET
     @Path(ApiEndpointsV1.ALL_KEYSPACES_SCHEMA_ROUTE)
     @Operation(summary = "Get all keyspaces schema",
-               description = "Returns the schema information for all keyspaces in the Cassandra cluster")
+               description = "Returns the schema information for all keyspaces in the Cassandra cluster, fetches " +
+                             "schema using describe schema call")
     @APIResponse(description = "Schema information retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
@@ -339,7 +340,8 @@ public class CassandraOperationsModule extends AbstractModule
     @GET
     @Path(ApiEndpointsV1.DEPRECATED_ALL_KEYSPACES_SCHEMA_ROUTE)
     @Operation(summary = "Get all keyspaces schema (deprecated)",
-               description = "Returns the schema information for all keyspaces in the Cassandra cluster. This endpoint is deprecated.")
+               description = "Returns the schema information for all keyspaces in the Cassandra cluster, fetches " +
+                             "schema using describe schema call. This endpoint is deprecated.")
     @APIResponse(description = "Schema information retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
@@ -355,7 +357,8 @@ public class CassandraOperationsModule extends AbstractModule
     @GET
     @Path(ApiEndpointsV1.KEYSPACE_SCHEMA_ROUTE)
     @Operation(summary = "Get keyspace schema",
-               description = "Returns the schema information for a specific keyspace")
+               description = "Returns the schema information for a specific keyspace, fetches schema using describe " +
+                             "schema call")
     @APIResponse(description = "Keyspace schema retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",
@@ -372,7 +375,8 @@ public class CassandraOperationsModule extends AbstractModule
     @GET
     @Path(ApiEndpointsV1.DEPRECATED_KEYSPACE_SCHEMA_ROUTE)
     @Operation(summary = "Get keyspace schema (deprecated)",
-               description = "Returns the schema information for a specific keyspace. This endpoint is deprecated.")
+               description = "Returns the schema information for a specific keyspace, fetches schema using describe " +
+                             "schema call. This endpoint is deprecated.")
     @APIResponse(description = "Keyspace schema retrieved successfully",
                  responseCode = "200",
                  content = @Content(mediaType = "application/json",

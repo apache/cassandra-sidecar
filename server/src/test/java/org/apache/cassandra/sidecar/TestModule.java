@@ -65,7 +65,7 @@ import org.apache.cassandra.sidecar.config.yaml.SchemaKeyspaceConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.SidecarConfigurationImpl;
 import org.apache.cassandra.sidecar.config.yaml.TestServiceConfiguration;
 import org.apache.cassandra.sidecar.config.yaml.ThrottleConfigurationImpl;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.utils.CassandraVersionProvider;
 
 import static org.apache.cassandra.sidecar.utils.TestMetricUtils.registry;
@@ -81,6 +81,13 @@ public class TestModule extends AbstractModule
     public static final int RESTORE_MAX_CONCURRENCY = 10;
 
     public TestCassandraAdapterDelegate delegate;
+
+    private RestoreJobConfiguration restoreJobConfigurationOverride;
+
+    public void restoreJobConfiguration(RestoreJobConfiguration restoreJobConfiguration)
+    {
+        this.restoreJobConfigurationOverride = restoreJobConfiguration;
+    }
 
     @Singleton
     @Provides
@@ -128,12 +135,14 @@ public class TestModule extends AbstractModule
                                 .cdcConfiguration(cdcConfiguration)
                                 .build();
         RestoreJobConfiguration restoreJobConfiguration =
-        RestoreJobConfigurationImpl.builder()
-                                   .restoreJobTablesTtl(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
-                                   .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
-                                   .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
-                                   .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
-                                   .build();
+        restoreJobConfigurationOverride != null
+        ? restoreJobConfigurationOverride
+        : RestoreJobConfigurationImpl.builder()
+                                     .restoreJobTablesTtl(SecondBoundConfiguration.parse((TimeUnit.DAYS.toSeconds(14) + 1) + "s"))
+                                     .processMaxConcurrency(RESTORE_MAX_CONCURRENCY)
+                                     .slowTaskThreshold(SecondBoundConfiguration.parse("10s"))
+                                     .slowTaskReportDelay(SecondBoundConfiguration.parse("2m"))
+                                     .build();
         PeriodicTaskConfiguration healthCheckConfiguration
         = new PeriodicTaskConfigurationImpl(true,
                                             MillisecondBoundConfiguration.parse("200ms"),
@@ -259,11 +268,12 @@ public class TestModule extends AbstractModule
 
     @Provides
     @Singleton
-    public DriverUnsupportedSchemaCache driverUnsupportedSchemaCache()
+    public SchemaCache schemaCache()
     {
-        DriverUnsupportedSchemaCache mock = mock(DriverUnsupportedSchemaCache.class);
-        when(mock.getFullSchema()).thenReturn("");
+        SchemaCache mock = mock(SchemaCache.class);
+        when(mock.getUnsupportedTableSchema()).thenReturn("");
         when(mock.getKeyspaceSchema(any())).thenReturn("");
+        when(mock.getFullSchema()).thenReturn("");
         return mock;
     }
 }

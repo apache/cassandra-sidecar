@@ -529,6 +529,11 @@ public class RestoreJobDiscoverer implements PeriodicTask, RingTopologyChangeLis
 
     private void finalizeJob(RestoreJobManagerGroup restoreJobManagers, RestoreJob job)
     {
+        // Secrets are no longer needed once the job is final.
+        if (job.secrets != null)
+        {
+            restoreJobDatabaseAccessor.removeSecrets(job.jobId);
+        }
         restoreJobManagers.removeJobInternal(job);
         if (job.isManagedBySidecar())
         {

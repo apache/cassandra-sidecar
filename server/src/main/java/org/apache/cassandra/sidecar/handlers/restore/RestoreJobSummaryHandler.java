@@ -85,7 +85,7 @@ public class RestoreJobSummaryHandler extends AbstractHandler<String> implements
         return RoutingContextUtils
         .getAsFuture(context, SC_RESTORE_JOB)
         .compose(restoreJob -> {
-            if (restoreJob.status == null || restoreJob.secrets == null)
+            if (restoreJob.status == null || (!restoreJob.status.isFinal() && restoreJob.secrets == null))
             {
                 logger.error("Restore job record read is missing required fields. job={}", restoreJob);
                 return Future.failedFuture(wrapHttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR,

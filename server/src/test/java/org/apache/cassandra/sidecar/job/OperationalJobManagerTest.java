@@ -326,6 +326,18 @@ class OperationalJobManagerTest
         verify(coordinator, never()).trySetActive(any(), any());
     }
 
+    @Test
+    void testAllInflightJobsDelegatesToTracker()
+    {
+        OperationalJobTracker tracker = mock(OperationalJobTracker.class);
+        List<OperationalJobInfo> inflight = List.of(mock(OperationalJobInfo.class));
+        when(tracker.inflightJobs()).thenReturn(inflight);
+        OperationalJobManager manager = new OperationalJobManager(tracker, new DisabledOperationalJobCoordinator(), executorPool);
+
+        assertThat(manager.allInflightJobs()).isEqualTo(inflight);
+        verify(tracker).inflightJobs();
+    }
+
     private static OperationalJob createCoordinatedJob(UUID jobId)
     {
         return new OperationalJob(jobId)

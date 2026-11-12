@@ -76,6 +76,8 @@ dependencies {
     testRuntimeOnly 'com.fasterxml.jackson.core:jackson-annotations:2.14.2'
 
     integrationTestCompileOnly(group: 'com.intellij', name: 'annotations', version: '12.0')
+    // Avro is provided at runtime by the CDC dependencies; compile only, to serialize CDC events in tests
+    integrationTestCompileOnly("org.apache.avro:avro:${project.avroVersion}")
 }
 
 apply from: "${project.rootDir}/gradle/common/integrationTestTask.gradle"

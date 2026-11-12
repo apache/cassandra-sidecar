@@ -31,7 +31,7 @@ import io.vertx.ext.web.RoutingContext;
 import org.apache.cassandra.sidecar.common.server.data.Name;
 import org.apache.cassandra.sidecar.common.server.data.QualifiedTableName;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
-import org.apache.cassandra.sidecar.db.DriverUnsupportedSchemaCache;
+import org.apache.cassandra.sidecar.db.SchemaCache;
 import org.apache.cassandra.sidecar.handlers.AbstractHandler;
 import org.apache.cassandra.sidecar.routes.RoutingContextUtils;
 import org.apache.cassandra.sidecar.utils.CassandraInputValidator;
@@ -50,16 +50,16 @@ import static org.apache.cassandra.sidecar.utils.HttpExceptions.wrapHttpExceptio
 @Singleton
 public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTableName>
 {
-    private final DriverUnsupportedSchemaCache driverUnsupportedSchemaCache;
+    private final SchemaCache schemaCache;
 
     @Inject
     public ValidateTableExistenceHandler(InstanceMetadataFetcher metadataFetcher,
                                          ExecutorPools executorPools,
                                          CassandraInputValidator validator,
-                                         DriverUnsupportedSchemaCache driverUnsupportedSchemaCache)
+                                         SchemaCache schemaCache)
     {
         super(metadataFetcher, executorPools, validator);
-        this.driverUnsupportedSchemaCache = driverUnsupportedSchemaCache;
+        this.schemaCache = schemaCache;
     }
 
     // It is a validator, and it does not assume values (keyspace and table) are present.
@@ -144,9 +144,9 @@ public class ValidateTableExistenceHandler extends AbstractHandler<QualifiedTabl
                 return null;
             }
             // schema cache can block if it was not successfully initialized at least once
-            return driverUnsupportedSchemaCache.getTableSchema(new Name(keyspace),
-                                                               new Name(table),
-                                                               false);
+            return schemaCache.getUnsupportedTableSchema(new Name(keyspace),
+                                                         new Name(table),
+                                                         false);
         });
     }
 }

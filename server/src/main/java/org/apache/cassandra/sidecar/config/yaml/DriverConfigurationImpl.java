@@ -35,7 +35,7 @@ import org.apache.cassandra.sidecar.config.SslConfiguration;
 public class DriverConfigurationImpl implements DriverConfiguration
 {
     private static final int DEFAULT_NUM_CONNECTIONS = 1000;
-    private static final SecondBoundConfiguration DEFAULT_UNSUPPORTED_TABLE_SCHEMA_REFRESH_TIME = new SecondBoundConfiguration(5, TimeUnit.MINUTES);
+    private static final SecondBoundConfiguration DEFAULT_SCHEMA_REFRESH_TIME = new SecondBoundConfiguration(5, TimeUnit.MINUTES);
 
     @JsonProperty("contact_points")
     private final List<InetSocketAddress> contactPoints;
@@ -58,8 +58,12 @@ public class DriverConfigurationImpl implements DriverConfiguration
     @JsonProperty("ssl")
     private final SslConfiguration sslConfiguration;
 
+    @Deprecated
     @JsonProperty("unsupported_table_schema_refresh_time")
     private final SecondBoundConfiguration unsupportedTableSchemaRefreshTime;
+
+    @JsonProperty("schema_refresh_time")
+    private final SecondBoundConfiguration schemaRefreshTime;
 
     public DriverConfigurationImpl()
     {
@@ -76,6 +80,7 @@ public class DriverConfigurationImpl implements DriverConfiguration
         authProvider = builder.authProvider;
         sslConfiguration = builder.sslConfiguration;
         unsupportedTableSchemaRefreshTime = builder.unsupportedTableSchemaRefreshTime;
+        schemaRefreshTime = builder.schemaRefreshTime;
     }
 
     /**
@@ -153,11 +158,27 @@ public class DriverConfigurationImpl implements DriverConfiguration
     /**
      * {@inheritDoc}
      */
+    @Deprecated
     @Override
     @JsonProperty("unsupported_table_schema_refresh_time")
     public SecondBoundConfiguration unsupportedTableSchemaRefreshTime()
     {
         return unsupportedTableSchemaRefreshTime;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty("schema_refresh_time")
+    public SecondBoundConfiguration schemaRefreshTime()
+    {
+        if (schemaRefreshTime != null)
+        {
+            return schemaRefreshTime;
+        }
+        return unsupportedTableSchemaRefreshTime != null ? unsupportedTableSchemaRefreshTime
+                                                         : DEFAULT_SCHEMA_REFRESH_TIME;
     }
 
     public static Builder builder()
@@ -177,7 +198,8 @@ public class DriverConfigurationImpl implements DriverConfiguration
         private String password;
         private ParameterizedClassConfiguration authProvider;
         private SslConfiguration sslConfiguration;
-        private SecondBoundConfiguration unsupportedTableSchemaRefreshTime = DEFAULT_UNSUPPORTED_TABLE_SCHEMA_REFRESH_TIME;
+        private SecondBoundConfiguration unsupportedTableSchemaRefreshTime;
+        private SecondBoundConfiguration schemaRefreshTime;
 
         private Builder()
         {
@@ -291,10 +313,24 @@ public class DriverConfigurationImpl implements DriverConfiguration
          *
          * @param unsupportedTableSchemaRefreshTime the {@code unsupportedTableSchemaRefreshTime} to set
          * @return a reference to this Builder
+         * @deprecated use {@link #schemaRefreshTime(SecondBoundConfiguration)} instead
          */
+        @Deprecated
         public Builder unsupportedTableSchemaRefreshTime(SecondBoundConfiguration unsupportedTableSchemaRefreshTime)
         {
             return update(b -> b.unsupportedTableSchemaRefreshTime = unsupportedTableSchemaRefreshTime);
+        }
+
+        /**
+         * Sets the {@code schemaRefreshTime} and returns a reference to this Builder enabling
+         * method chaining.
+         *
+         * @param schemaRefreshTime the {@code schemaRefreshTime} to set
+         * @return a reference to this Builder
+         */
+        public Builder schemaRefreshTime(SecondBoundConfiguration schemaRefreshTime)
+        {
+            return update(b -> b.schemaRefreshTime = schemaRefreshTime);
         }
 
         /**

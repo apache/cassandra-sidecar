@@ -20,6 +20,7 @@ package org.apache.cassandra.sidecar.handlers.restore;
 
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -115,6 +116,28 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
     }
 
     @Test
+    void testCompletedJobWithRedactedSecretsSucceeds(VertxTestContext context) throws Throwable
+    {
+        String jobId = "7cd82ff9-d276-11ed-93e5-7fce0df1306f";
+        mockLookupRestoreJob(x -> {
+            UUID id = UUID.fromString(jobId);
+            return RestoreJob.builder()
+                             .createdAt(LocalDate.fromMillisSinceEpoch(UUIDs.unixTimestamp(id)))
+                             .jobId(id).jobAgent("job agent")
+                             .keyspace("ks").table("table")
+                             .jobStatus(RestoreJobStatus.SUCCEEDED)
+                             .jobSecrets(null)
+                             .sstableImportOptions(SSTableImportOptions.defaults())
+                             .build();
+        });
+        sendGetRestoreJobSummaryRequestAndVerify("ks", "table", jobId, context, HttpResponseStatus.OK.code(),
+                                                 response -> {
+                                                     assertThat(response.secrets()).isNull();
+                                                     assertThat(response.status()).isEqualTo(RestoreJobStatus.SUCCEEDED.name());
+                                                 });
+    }
+
+    @Test
     void testReadIncompleteRecordFails(VertxTestContext context) throws Throwable
     {
         mockLookupRestoreJob(x -> {
@@ -136,6 +159,21 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
                                                           VertxTestContext context,
                                                           int expectedStatusCode) throws Throwable
     {
+        sendGetRestoreJobSummaryRequestAndVerify(keyspace, table, jobId, context, expectedStatusCode,
+                                                 response -> {
+                                                     assertThat(response.jobAgent()).isNotNull();
+                                                     assertThat(response.secrets()).isEqualTo(SECRETS);
+                                                     assertThat(response.status()).isNotNull();
+                                                 });
+    }
+
+    private void sendGetRestoreJobSummaryRequestAndVerify(String keyspace,
+                                                          String table,
+                                                          String jobId,
+                                                          VertxTestContext context,
+                                                          int expectedStatusCode,
+                                                          Consumer<RestoreJobSummaryResponsePayload> okAssertions) throws Throwable
+    {
         WebClient client = WebClient.create(vertx, new WebClientOptions());
         client.get(server.actualPort(), "localhost", String.format(RESTORE_JOB_INFO_ENDPOINT, keyspace, table, jobId))
               .as(BodyCodec.buffer())
@@ -148,9 +186,7 @@ class RestoreJobSummaryHandlerTest extends BaseRestoreJobTests
                           = Json.decodeValue(resp.result().body(), RestoreJobSummaryResponsePayload.class);
                           assertThat(response.keyspace()).isEqualTo(keyspace);
                           assertThat(response.table()).isEqualTo(table);
-                          assertThat(response.jobAgent()).isNotNull();
-                          assertThat(response.secrets()).isEqualTo(SECRETS);
-                          assertThat(response.status()).isNotNull();
+                          okAssertions.accept(response);
                       }
                   })
                   .completeNow();

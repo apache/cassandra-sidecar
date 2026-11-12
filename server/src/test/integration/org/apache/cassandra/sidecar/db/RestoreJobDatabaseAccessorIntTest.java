@@ -167,6 +167,28 @@ class RestoreJobDatabaseAccessorIntTest extends IntegrationTestBase
         assertThat(found.credentialType).isEqualTo(CredentialType.STATIC);
     }
 
+    @CassandraIntegrationTest
+    void testRemoveSecrets()
+    {
+        waitForSchemaReady(30, TimeUnit.SECONDS);
+
+        RestoreJobDatabaseAccessor accessor = injector.getInstance(RestoreJobDatabaseAccessor.class);
+        UUID jobId = createJob(accessor);
+        assertThat(accessor.find(jobId).secrets).isEqualTo(secrets);
+
+        accessor.removeSecrets(jobId);
+        RestoreJob found = accessor.find(jobId);
+        assertThat(found.secrets).isNull();
+        // non-sensitive metadata is preserved for auditing
+        assertThat(found.status).isEqualTo(RestoreJobStatus.CREATED);
+        assertThat(found.credentialType).isEqualTo(CredentialType.STATIC);
+        assertThat(found.jobAgent).isEqualTo("agent");
+
+        // idempotent
+        accessor.removeSecrets(jobId);
+        assertThat(accessor.find(jobId).secrets).isNull();
+    }
+
     private UUID createJob(RestoreJobDatabaseAccessor accessor)
     {
         return createJob(accessor, false);

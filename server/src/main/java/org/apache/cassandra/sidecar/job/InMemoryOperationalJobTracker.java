@@ -129,6 +129,20 @@ public class InMemoryOperationalJobTracker implements OperationalJobTracker
                          .collect(Collectors.toList());
     }
 
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @NotNull
+    public List<OperationalJobInfo> inflightJobs()
+    {
+        return jobsView().values()
+                         .stream()
+                         .filter(j -> !j.status().isCompleted())
+                         .map(j -> (OperationalJobInfo) j)
+                         .collect(Collectors.toList());
+    }
+
     @VisibleForTesting
     OperationalJob put(OperationalJob job)
     {

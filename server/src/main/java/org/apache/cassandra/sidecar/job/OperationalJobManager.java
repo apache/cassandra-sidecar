@@ -21,7 +21,6 @@ package org.apache.cassandra.sidecar.job;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.BiConsumer;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,10 +70,7 @@ public class OperationalJobManager
      */
     public List<OperationalJobInfo> allInflightJobs()
     {
-        return jobTracker.jobsView().values()
-                         .stream()
-                         .filter(j -> !j.status().isCompleted())
-                         .collect(Collectors.toList());
+        return jobTracker.inflightJobs();
     }
 
     /**

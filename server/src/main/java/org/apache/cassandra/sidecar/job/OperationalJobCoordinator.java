@@ -34,12 +34,12 @@ public interface OperationalJobCoordinator
 {
     /**
      * Attempt to set an operation as active. Implementations must ensure mutual exclusion
-     * so that only one operation of the given type is active at a time.
+     * so that only one operation of the given type is active at a time within the local datacenter.
      *
      * @param operationType the type of operation
      * @param operationId   the unique identifier for this operation
      * @return {@code true} if the operation was successfully set as active,
-     *         {@code false} if an operation of the same type is already active
+     *         {@code false} if an operation of the same type is already active in the local datacenter
      */
     boolean trySetActive(OperationType operationType, UUID operationId);
 

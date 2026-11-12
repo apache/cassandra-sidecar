@@ -213,6 +213,20 @@ public class RestoreJobDatabaseAccessor extends DatabaseAccessor<RestoreJobsSche
         execute(statement);
     }
 
+    /**
+     * Remove the stored secrets of the restore job.
+     *
+     * @param jobId id of the restore job
+     */
+    public void removeSecrets(UUID jobId)
+    {
+        sidecarSchema.ensureInitialized();
+
+        BoundStatement statement = tableSchema.updateBlobSecrets()
+                                              .bind(RestoreJob.toLocalDate(jobId), jobId, null);
+        execute(statement);
+    }
+
     public RestoreJob find(UUID jobId)
     {
         sidecarSchema.ensureInitialized();
