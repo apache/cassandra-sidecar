@@ -168,6 +168,37 @@ class SSTableImporterTest
     }
 
     @Test
+    void testVerificationDisabledByConfiguration(VertxTestContext context)
+    {
+        ServiceConfiguration noVerifyConfig =
+        TestServiceConfiguration.builder()
+                                .sstableImportConfiguration(new SSTableImportConfigurationImpl(10).verificationEnabled(false))
+                                .build();
+        when(mockTableOperations1.importNewSSTables("ks", "tbl", "/dir", true, true,
+                                                    false, false, true, false, false, false, false))
+        .thenReturn(Collections.emptyList());
+        TestSSTableImporter noVerifyImporter = new TestSSTableImporter(vertx, mockMetadataFetcher, noVerifyConfig,
+                                                                       executorPools, mockUploadPathBuilder);
+        Future<Void> importFuture = noVerifyImporter.scheduleImport(new SSTableImporter.ImportOptions.Builder()
+                                                                    .host("localhost")
+                                                                    .keyspace("ks")
+                                                                    .tableName("tbl")
+                                                                    .directory("/dir")
+                                                                    .uploadId("0000-0000")
+                                                                    .verifySSTables(true)
+                                                                    .verifyTokens(true)
+                                                                    .extendedVerify(true)
+                                                                    .validateIndexChecksum(true)
+                                                                    .build());
+        noVerifyImporter.latch.countDown();
+        importFuture.onComplete(context.succeeding(v -> {
+            verify(mockTableOperations1, times(1))
+            .importNewSSTables("ks", "tbl", "/dir", true, true, false, false, true, false, false, false, false);
+            context.completeNow();
+        }));
+    }
+
+    @Test
     void testImportFailsWhenCassandraIsUnavailable(VertxTestContext context)
     {
         Future<Void> importFuture = importer.scheduleImport(new SSTableImporter.ImportOptions.Builder()
