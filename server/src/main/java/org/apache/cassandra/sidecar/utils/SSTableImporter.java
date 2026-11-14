@@ -24,7 +24,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
@@ -163,37 +162,22 @@ public class SSTableImporter
     }
 
     /**
-     * Logs the total size of each SSTable to be imported. An SSTable consists of multiple components that share
-     * the same base name, e.g. nb-1-big-Data.db and nb-1-big-Index.db. Failures are ignored, since this is
+     * Logs the import options and the total size of the files to import. Failures are ignored, since this is
      * diagnostic logging that must not fail the import.
      *
      * @param options import options
      * @param verify  false if verification is disabled by configuration
      */
-    private void logSSTableSizes(ImportOptions options, boolean verify)
+    private void logImportSize(ImportOptions options, boolean verify)
     {
         try
         {
-            File[] files = new File(options.directory).listFiles(File::isFile);
-            if (files == null)
-            {
-                return;
-            }
-            Map<String, Long> sstableSizes = new TreeMap<>();
-            long totalSize = 0;
-            for (File file : files)
-            {
-                String name = file.getName();
-                int idx = name.lastIndexOf('-');
-                sstableSizes.merge(idx > 0 ? name.substring(0, idx) : name, file.length(), Long::sum);
-                totalSize += file.length();
-            }
-            LOGGER.info("SSTables to import. options={} verificationDisabled={} totalSizeBytes={} sstableSizes={}",
-                        options, !verify, totalSize, sstableSizes);
+            LOGGER.info("SSTables to import. options={} verificationDisabled={} totalSizeBytes={}",
+                        options, !verify, FileUtils.directorySizeBytes(new File(options.directory)));
         }
         catch (Exception e)
         {
-            LOGGER.warn("Failed to determine the sizes of SSTables to import. uploadId={} directory={}",
+            LOGGER.warn("Failed to determine the size of SSTables to import. uploadId={} directory={}",
                         options.uploadId, options.directory, e);
         }
     }
@@ -268,7 +252,7 @@ public class SSTableImporter
                 // when verification is disabled by configuration, it overrides the request options
                 boolean verify = importConfiguration.verificationEnabled();
                 // log before importing, as the files are moved out of the directory when copyData is false
-                logSSTableSizes(options, verify);
+                logImportSize(options, verify);
                 List<String> failedDirectories =
                 tableOperations.importNewSSTables(options.keyspace,
                                                   options.tableName,
