@@ -18,6 +18,7 @@
 
 package org.apache.cassandra.sidecar.utils;
 
+import java.io.File;
 import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.List;
@@ -42,6 +43,7 @@ import org.apache.cassandra.sidecar.cluster.instance.InstanceMetadata;
 import org.apache.cassandra.sidecar.common.data.SSTableImportOptions;
 import org.apache.cassandra.sidecar.common.server.TableOperations;
 import org.apache.cassandra.sidecar.concurrent.ExecutorPools;
+import org.apache.cassandra.sidecar.config.SSTableImportConfiguration;
 import org.apache.cassandra.sidecar.config.ServiceConfiguration;
 import org.apache.cassandra.sidecar.metrics.instance.InstanceMetrics;
 import org.jetbrains.annotations.NotNull;
@@ -68,6 +70,7 @@ public class SSTableImporter
     public static final boolean DEFAULT_FAIL_ON_MISSING_INDEX = SSTableImportOptions.DEFAULT_FAIL_ON_MISSING_INDEX;
     public static final boolean DEFAULT_VALIDATE_INDEX_CHECKSUM = SSTableImportOptions.DEFAULT_VALIDATE_INDEX_CHECKSUM;
     private final Vertx vertx;
+    private final SSTableImportConfiguration importConfiguration;
     private final ExecutorPools executorPools;
     private final InstanceMetadataFetcher metadataFetcher;
     private final SSTableUploadsPathBuilder uploadPathBuilder;
@@ -91,12 +94,13 @@ public class SSTableImporter
                     SSTableUploadsPathBuilder uploadPathBuilder)
     {
         this.vertx = vertx;
+        this.importConfiguration = configuration.sstableImportConfiguration();
         this.executorPools = executorPools;
         this.metadataFetcher = metadataFetcher;
         this.uploadPathBuilder = uploadPathBuilder;
         this.importQueuePerHost = new ConcurrentHashMap<>();
         executorPools.internal()
-                     .setPeriodic(configuration.sstableImportConfiguration().executeInterval().toMillis(),
+                     .setPeriodic(importConfiguration.executeInterval().toMillis(),
                                   this::processPendingImports);
     }
 
@@ -155,6 +159,27 @@ public class SSTableImporter
     private ImportQueue initializeQueue(ImportId key)
     {
         return new ImportQueue();
+    }
+
+    /**
+     * Logs the import options and the total size of the files to import. Failures are ignored, since this is
+     * diagnostic logging that must not fail the import.
+     *
+     * @param options import options
+     * @param verify  false if verification is disabled by configuration
+     */
+    private void logImportSize(ImportOptions options, boolean verify)
+    {
+        try
+        {
+            LOGGER.info("SSTables to import. options={} verificationDisabled={} totalSizeBytes={}",
+                        options, !verify, FileUtils.directorySizeBytes(new File(options.directory)));
+        }
+        catch (Exception e)
+        {
+            LOGGER.warn("Failed to determine the size of SSTables to import. uploadId={} directory={}",
+                        options.uploadId, options.directory, e);
+        }
     }
 
     /**
@@ -224,26 +249,31 @@ public class SSTableImporter
             {
                 TableOperations tableOperations = instance.delegate().tableOperations();
                 long startTime = System.nanoTime();
+                // when verification is disabled by configuration, it overrides the request options
+                boolean verify = importConfiguration.verificationEnabled();
+                // log before importing, as the files are moved out of the directory when copyData is false
+                logImportSize(options, verify);
                 List<String> failedDirectories =
                 tableOperations.importNewSSTables(options.keyspace,
                                                   options.tableName,
                                                   options.directory,
                                                   options.resetLevel,
                                                   options.clearRepaired,
-                                                  options.verifySSTables,
-                                                  options.verifyTokens,
+                                                  options.verifySSTables && verify,
+                                                  options.verifyTokens && verify,
                                                   options.invalidateCaches,
-                                                  options.extendedVerify,
+                                                  options.extendedVerify && verify,
                                                   options.copyData,
                                                   options.failOnMissingIndex,
-                                                  options.validateIndexChecksum);
+                                                  options.validateIndexChecksum && verify);
                 long serviceTimeNanos = System.nanoTime() - startTime;
                 if (!failedDirectories.isEmpty())
                 {
                     failureCount++;
-                    LOGGER.error("Failed to import SSTables with options={}, serviceTimeMillis={}, " +
-                                 "failedDirectories={}", options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos),
-                                 failedDirectories);
+                    LOGGER.error("Failed to import SSTables. host={} keyspace={} table={} uploadId={} " +
+                                 "serviceTimeMillis={} failedDirectories={}",
+                                 options.host, options.keyspace, options.tableName, options.uploadId,
+                                 TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos), failedDirectories);
                     // TODO: HttpException should not be thrown by importer, as it is not at the transport layer
                     promise.fail(new HttpException(HttpResponseStatus.INTERNAL_SERVER_ERROR.code(),
                                                    "Failed to import from directories: " + failedDirectories));
@@ -251,8 +281,9 @@ public class SSTableImporter
                 else
                 {
                     successCount++;
-                    LOGGER.info("Successfully imported SSTables with options={}, serviceTimeMillis={}",
-                                options, TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
+                    LOGGER.info("Successfully imported SSTables. host={} keyspace={} table={} uploadId={} serviceTimeMillis={}",
+                                options.host, options.keyspace, options.tableName, options.uploadId,
+                                TimeUnit.NANOSECONDS.toMillis(serviceTimeNanos));
                     promise.complete();
                     cleanup(options);
                 }
@@ -260,7 +291,8 @@ public class SSTableImporter
             catch (Exception exception)
             {
                 failureCount++;
-                LOGGER.error("Failed to import SSTables with options={}", options, exception);
+                LOGGER.error("Failed to import SSTables. host={} keyspace={} table={} uploadId={}",
+                             options.host, options.keyspace, options.tableName, options.uploadId, exception);
                 promise.fail(exception);
             }
         }
@@ -287,11 +319,10 @@ public class SSTableImporter
                                                            .deleteRecursive(stagingDirectory, true))
                          .onSuccess(v ->
                                     LOGGER.debug("Successfully removed staging directory for uploadId={}, " +
-                                                 "instance={}, options={}", options.uploadId, options.host, options))
+                                                 "instance={}", options.uploadId, options.host))
                          .onFailure(cause ->
                                     LOGGER.error("Failed to remove staging directory for uploadId={}, " +
-                                                 "instance={}, options={}", options.uploadId, options.host, options,
-                                                 cause));
+                                                 "instance={}", options.uploadId, options.host, cause));
     }
 
     /**

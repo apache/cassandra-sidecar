@@ -115,6 +115,7 @@ sidecar:
   allowable_time_skew: 1h
   sstable_import:
     execute_interval: 100ms
+    verification_enabled: true # set to false to disable all SSTable verification on import, overriding request options
     cache:
       expire_after_access: 2h # 2 hours
       maximum_size: 10000

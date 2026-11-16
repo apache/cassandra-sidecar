@@ -51,7 +51,7 @@ public class FileUtils
     public static long directorySizeBytes(File directory)
     {
         long size = 0;
-        final File[] files = directory.listFiles();
+        File[] files = directory.listFiles();
         if (files != null)
         {
             for (File file : files)

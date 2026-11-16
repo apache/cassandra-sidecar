@@ -32,6 +32,8 @@ public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImp
 {
     private static final MillisecondBoundConfiguration DEFAULT_IMPORT_EXECUTE_INTERVAL = MillisecondBoundConfiguration.parse("100ms");
     public static final String CACHE_PROPERTY = "cache";
+    public static final String VERIFICATION_ENABLED_PROPERTY = "verification_enabled";
+    protected static final boolean DEFAULT_VERIFICATION_ENABLED = true;
     protected static final CacheConfiguration DEFAULT_CACHE_CONFIGURATION = CacheConfigurationImpl.builder()
                                                                                                   .expireAfterAccess(MillisecondBoundConfiguration.parse("2h"))
                                                                                                   .maximumSize(10_000)
@@ -39,6 +41,9 @@ public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImp
 
     @JsonProperty(value = CACHE_PROPERTY)
     protected final CacheConfiguration cacheConfiguration;
+
+    @JsonProperty(value = VERIFICATION_ENABLED_PROPERTY)
+    protected boolean verificationEnabled = DEFAULT_VERIFICATION_ENABLED;
 
     public SSTableImportConfigurationImpl()
     {
@@ -71,5 +76,28 @@ public class SSTableImportConfigurationImpl extends PeriodicTaskConfigurationImp
     public CacheConfiguration cacheConfiguration()
     {
         return cacheConfiguration;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    @JsonProperty(value = VERIFICATION_ENABLED_PROPERTY)
+    public boolean verificationEnabled()
+    {
+        return verificationEnabled;
+    }
+
+    /**
+     * Sets whether SSTable verification is enabled during import
+     *
+     * @param verificationEnabled {@code false} to disable all verification
+     * @return this configuration
+     */
+    @JsonProperty(value = VERIFICATION_ENABLED_PROPERTY)
+    public SSTableImportConfigurationImpl verificationEnabled(boolean verificationEnabled)
+    {
+        this.verificationEnabled = verificationEnabled;
+        return this;
     }
 }
