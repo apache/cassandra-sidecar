@@ -18,9 +18,12 @@
 
 package org.apache.cassandra.sidecar.config.yaml;
 
+import java.io.IOException;
+
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
+import org.apache.cassandra.sidecar.config.OperationalJobConfiguration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -31,10 +34,30 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class OperationalJobConfigurationImplTest
 {
     @Test
-    void testDefaultTtl()
+    void testDefaults()
     {
         OperationalJobConfigurationImpl config = new OperationalJobConfigurationImpl();
         assertThat(config.tablesTtl()).isEqualTo(SecondBoundConfiguration.parse("90d"));
+        assertThat(config.coordinationEnabled()).isFalse();
+        assertThat(config.localJobCoordinationDelay()).isEqualTo(SecondBoundConfiguration.parse("3m"));
+        assertThat(config.nodeExecutionTimeout()).isEqualTo(SecondBoundConfiguration.parse("10m"));
+        assertThat(config.durableTrackingEnabled()).isFalse();
+    }
+
+    @Test
+    void testEmptyYamlValuesUseDefaults() throws IOException
+    {
+        String yaml = "operational_job:\n"
+                      + "  tables_ttl:\n"
+                      + "  local_job_coordination_delay:\n"
+                      + "  node_execution_timeout:\n";
+
+        OperationalJobConfiguration config = SidecarConfigurationImpl.fromYamlString(yaml)
+                                                                     .operationalJobConfiguration();
+
+        assertThat(config.tablesTtl()).isEqualTo(SecondBoundConfiguration.parse("90d"));
+        assertThat(config.localJobCoordinationDelay()).isEqualTo(SecondBoundConfiguration.parse("3m"));
+        assertThat(config.nodeExecutionTimeout()).isEqualTo(SecondBoundConfiguration.parse("10m"));
     }
 
     @Test
@@ -44,6 +67,43 @@ class OperationalJobConfigurationImplTest
                                                                 .tablesTtl(SecondBoundConfiguration.parse("13d"))
                                                                 .build())
         .isInstanceOf(IllegalArgumentException.class)
-        .hasMessageContaining("tablesTtl cannot be less than");
+        .hasMessageContaining("tables_ttl cannot be less than");
+    }
+
+    @Test
+    void testZeroLocalJobCoordinationDelayThrows()
+    {
+        assertThatThrownBy(() -> OperationalJobConfigurationImpl.builder()
+                                                                .localJobCoordinationDelay(SecondBoundConfiguration.parse("0s"))
+                                                                .build())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("local_job_coordination_delay must be greater than 0");
+    }
+
+    @Test
+    void testZeroNodeExecutionTimeoutThrows()
+    {
+        assertThatThrownBy(() -> OperationalJobConfigurationImpl.builder()
+                                                                .nodeExecutionTimeout(SecondBoundConfiguration.parse("0s"))
+                                                                .build())
+        .isInstanceOf(IllegalArgumentException.class)
+        .hasMessageContaining("node_execution_timeout must be greater than 0");
+    }
+
+    @Test
+    void testCustomValues()
+    {
+        OperationalJobConfigurationImpl config = OperationalJobConfigurationImpl.builder()
+                                                                                .tablesTtl(SecondBoundConfiguration.parse("120d"))
+                                                                                .coordinationEnabled(false)
+                                                                                .localJobCoordinationDelay(SecondBoundConfiguration.parse("1m"))
+                                                                                .nodeExecutionTimeout(SecondBoundConfiguration.parse("30m"))
+                                                                                .durableTrackingEnabled(true)
+                                                                                .build();
+        assertThat(config.tablesTtl()).isEqualTo(SecondBoundConfiguration.parse("120d"));
+        assertThat(config.coordinationEnabled()).isFalse();
+        assertThat(config.localJobCoordinationDelay()).isEqualTo(SecondBoundConfiguration.parse("1m"));
+        assertThat(config.nodeExecutionTimeout()).isEqualTo(SecondBoundConfiguration.parse("30m"));
+        assertThat(config.durableTrackingEnabled()).isTrue();
     }
 }

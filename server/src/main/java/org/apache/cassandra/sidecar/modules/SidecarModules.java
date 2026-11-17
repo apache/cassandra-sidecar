@@ -57,7 +57,7 @@ public class SidecarModules
                .add(Modules.disableCircularProxiesModule())
                .add(new ApiModule())
                .add(new AuthModule())
-               .add(new CassandraOperationsModule())
+               .add(new CassandraOperationsModule(config))
                .add(new ConfigurationModule(config))
                .add(new CoordinationModule())
                .add(new HealthCheckModule())
