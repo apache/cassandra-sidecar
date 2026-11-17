@@ -27,4 +27,11 @@ public interface SSTableImportConfiguration extends PeriodicTaskConfiguration
      * @return the configuration for the cache used for SSTable Import requests
      */
     CacheConfiguration cacheConfiguration();
+
+    /**
+     * @return {@code false} to force-disable all SSTable verification (sstable, token, extended, and index checksum
+     * verification) during import, overriding the options of the import request; {@code true} (default) honors
+     * the request options
+     */
+    boolean verificationEnabled();
 }

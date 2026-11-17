@@ -351,3 +351,19 @@ Notes
 -----
 
 <sup>1</sup> The Sidecar Client offers Java 1.8 compatibility, and produces artifacts for both Java 1.8 and Java 11.
+
+## Publishing snapshots
+
+On every `trunk` commit that passes CI, GitHub Actions (`.github/workflows/publish-snapshot.yml`)
+publishes a `SNAPSHOT` build to the ASF Nexus snapshot repository, so downstream projects
+(e.g. `cassandra-analytics`) can build against Sidecar trunk without waiting on a release.
+The workflow needs the `NEXUS_USER` and `NEXUS_PW` repository secrets.
+
+To publish manually, e.g. for testing:
+
+```shell
+MAVEN_USERNAME=<asf-username> MAVEN_PASSWORD=<asf-password> ./scripts/publish-snapshot.sh
+```
+
+The script refuses to run unless `version` in `gradle.properties` ends in `-SNAPSHOT`, and never signs
+artifacts. Set `MAVEN_REPOSITORY_URL` (e.g. `file:///tmp/repo`) to publish to a different location for testing.
