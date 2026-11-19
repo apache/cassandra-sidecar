@@ -1,5 +1,6 @@
 0.5.0
 -----
+ * Add a per-node restart job and a replica-aware ring health check (CASSSIDECAR-514)
  * Add support for creation and coordination of local Sidecar jobs (CASSSIDECAR-378)
  * Add server option to disable all SSTable verification in SSTableImporter (CASSSIDECAR-513)
  * Add local job execution and storage support for coordinated cluster-wide operations (CASSSIDECAR-508)
