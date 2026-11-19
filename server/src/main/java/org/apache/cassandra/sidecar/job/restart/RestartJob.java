@@ -208,10 +208,7 @@ public class RestartJob extends LocalJob
         long deadline = System.currentTimeMillis() + cassandraHealthTimeout.toMillis();
         while (System.currentTimeMillis() < deadline)
         {
-            if (isCancelled())
-            {
-                return false;
-            }
+            throwIfCancelled();
             try
             {
                 if (healthChecker.isHealthy(ringSupplier.get(), nodeId()))
@@ -266,9 +263,8 @@ public class RestartJob extends LocalJob
             // requested, finish it and bring the node back up
             if (desiredState == CassandraState.STOPPED && !transitionRequested && isCancelled())
             {
-                LOGGER.info("Restart cancelled before node {} was stopped; leaving node RUNNING. operationId={}",
-                            nodeId(), operationId());
-                return false;
+                throw new RestartFailedException("Restart cancelled before node " + nodeId()
+                                                 + " was stopped; leaving node RUNNING. operationId=" + operationId());
             }
             if (!transitionRequested)
             {

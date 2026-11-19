@@ -258,32 +258,34 @@ class RestartJobTest
     }
 
     @Test
-    void testCancelDuringRingHealthCheckFailsWithoutWaitingForTheTimeout() throws Exception
+    void testCancelDuringRingHealthCheckFailsAsCancelled() throws Exception
     {
         stubLifecycle(CassandraState.RUNNING);
-        RestartJob job = createJob();
+        RestartJob job = createJob(0);
         when(healthChecker.isHealthy(any(), eq(nodeId))).thenAnswer(inv -> {
             job.cancel();
             return false;
         });
 
-        assertThatThrownBy(job::execute).isInstanceOf(RestartFailedException.class);
+        assertThatThrownBy(job::execute).isInstanceOf(RestartFailedException.class)
+                                        .hasMessageStartingWith("Restart cancelled");
         assertThat(job.status()).isEqualTo(OperationalJobStatus.FAILED);
         verify(lifecycleManager, never()).updateDesiredState(any(), eq(CassandraState.STOPPED));
         verify(healthChecker, times(1)).isHealthy(any(), eq(nodeId));
     }
 
     @Test
-    void testCancelBeforeTheStopIsRequestedLeavesTheNodeRunning() throws Exception
+    void testCancelBeforeTheStopIsRequestedFailsAsCancelledAndLeavesTheNodeRunning() throws Exception
     {
         stubLifecycle(CassandraState.RUNNING);
-        RestartJob job = createJob();
+        RestartJob job = createJob(0);
         when(healthChecker.isHealthy(any(), eq(nodeId))).thenAnswer(inv -> {
             job.cancel();
             return true;
         });
 
-        assertThatThrownBy(job::execute).isInstanceOf(RestartFailedException.class);
+        assertThatThrownBy(job::execute).isInstanceOf(RestartFailedException.class)
+                                        .hasMessageStartingWith("Restart cancelled");
         assertThat(job.status()).isEqualTo(OperationalJobStatus.FAILED);
         verify(lifecycleManager, never()).updateDesiredState(any(), eq(CassandraState.STOPPED));
         assertThat(currentState.get()).isEqualTo(CassandraState.RUNNING);
