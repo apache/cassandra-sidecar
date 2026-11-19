@@ -72,6 +72,18 @@ class ReplicaScopeHealthCheckerTest
         assertThat(checker.isHealthy(ring, local)).isFalse();
     }
 
+    @ParameterizedTest(name = "status={0} state={1}")
+    @CsvSource({"Down, Normal", "Up, Joining", "Up, Leaving", "Up, Moving"})
+    void testLocalNodeNotUpAndNormalReturnsUnhealthy(String status, String state)
+    {
+        UUID local = UUID.randomUUID();
+        RingResponse ring = new RingResponse();
+        ring.add(ringEntry("dc1", "rackA", status, state, local));
+        ring.add(ringEntry("dc1", "rackB", "Up", UUID.randomUUID()));
+        ring.add(ringEntry("dc1", "rackC", "Up", UUID.randomUUID()));
+        assertThat(checker.isHealthy(ring, local)).isFalse();
+    }
+
     @Test
     void testNodeDownInSameRackReturnsHealthy()
     {

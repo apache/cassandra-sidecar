@@ -51,6 +51,12 @@ public class ReplicaScopeHealthChecker implements RingHealthChecker
             LOGGER.warn("Node {} not found in ring; cannot verify it is safe to take down", localNodeId);
             return false;
         }
+        if (!isUpAndNormal(local))
+        {
+            LOGGER.warn("Local node {} is not up and normal (status={}, state={}); taking it down is unsafe",
+                        localNodeId, local.status(), local.state());
+            return false;
+        }
 
         String localRack = local.rack();
         String localDatacenter = local.datacenter();
@@ -67,7 +73,7 @@ public class ReplicaScopeHealthChecker implements RingHealthChecker
             {
                 continue;
             }
-            if (!"Up".equalsIgnoreCase(entry.status()) || !"Normal".equalsIgnoreCase(entry.state()))
+            if (!isUpAndNormal(entry))
             {
                 LOGGER.debug("Node {} in datacenter {} rack {} is not confirmed up and normal (status={}, state={}); "
                              + "taking a node down is unsafe under {} scope", entry.hostId(), entry.datacenter(),
@@ -96,6 +102,11 @@ public class ReplicaScopeHealthChecker implements RingHealthChecker
             default:
                 throw new IllegalArgumentException("Unknown ReplicaScope: " + scope);
         }
+    }
+
+    private static boolean isUpAndNormal(RingEntry entry)
+    {
+        return "Up".equalsIgnoreCase(entry.status()) && "Normal".equalsIgnoreCase(entry.state());
     }
 
     private static RingEntry findEntry(RingResponse ring, UUID nodeId)
