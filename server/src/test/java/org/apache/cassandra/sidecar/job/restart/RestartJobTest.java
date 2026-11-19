@@ -19,8 +19,10 @@
 package org.apache.cassandra.sidecar.job.restart;
 
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,7 @@ import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.data.OperationalJobStatus;
 import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
+import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.exceptions.LifecycleTaskConflictException;
 import org.apache.cassandra.sidecar.lifecycle.LifecycleManager;
@@ -57,6 +60,8 @@ class RestartJobTest
 
     private final AtomicReference<CassandraState> currentState = new AtomicReference<>();
     private final AtomicReference<CassandraState> desiredState = new AtomicReference<>();
+    private final AtomicReference<String> localRingStatus = new AtomicReference<>();
+    private Supplier<RingResponse> ringSupplier;
     private LifecycleManager lifecycleManager;
     private RingHealthChecker healthChecker;
     private UUID nodeId;
@@ -67,6 +72,8 @@ class RestartJobTest
         lifecycleManager = mock(LifecycleManager.class);
         healthChecker = mock(RingHealthChecker.class);
         nodeId = UUID.randomUUID();
+        localRingStatus.set("Up");
+        ringSupplier = () -> ring(localRingStatus.get());
     }
 
     @Test
@@ -184,6 +191,49 @@ class RestartJobTest
         assertThat(job.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
         assertThat(startCallCount.get()).isEqualTo(2);
         verify(lifecycleManager, times(1)).updateDesiredState(INSTANCE_HOST, CassandraState.STOPPED);
+    }
+
+    @Test
+    void testStartFailsWhenTheLocalNodeNeverBecomesNormal() throws Exception
+    {
+        when(healthChecker.isHealthy(any(), eq(nodeId))).thenReturn(true);
+        stubLifecycle(CassandraState.RUNNING);
+        localRingStatus.set("Down");
+
+        RestartJob job = createJob(0);
+
+        assertThatThrownBy(job::execute).isInstanceOf(RestartFailedException.class);
+        assertThat(job.status()).isEqualTo(OperationalJobStatus.FAILED);
+    }
+
+    @Test
+    void testStartWaitsUntilTheLocalNodeIsNormal() throws Exception
+    {
+        when(healthChecker.isHealthy(any(), eq(nodeId))).thenReturn(true);
+        stubLifecycle(CassandraState.RUNNING);
+        AtomicBoolean startRequested = new AtomicBoolean();
+        when(lifecycleManager.updateDesiredState(eq(INSTANCE_HOST), eq(CassandraState.RUNNING)))
+        .thenAnswer(inv -> {
+            converge(CassandraState.RUNNING);
+            startRequested.set(true);
+            return info();
+        });
+        AtomicInteger failedReads = new AtomicInteger();
+        ringSupplier = () -> {
+            if (startRequested.get() && failedReads.get() < 3)
+            {
+                failedReads.incrementAndGet();
+                throw new RuntimeException("JMX not available yet");
+            }
+            return ring(localRingStatus.get());
+        };
+
+        RestartJob job = createJob();
+        job.execute();
+
+        assertThat(job.status()).isEqualTo(OperationalJobStatus.SUCCEEDED);
+        assertThat(failedReads.get()).isEqualTo(3);
+        verify(lifecycleManager, times(1)).updateDesiredState(INSTANCE_HOST, CassandraState.RUNNING);
     }
 
     @Test
@@ -349,9 +399,28 @@ class RestartJobTest
         RestartJob job = new RestartJob(UUID.randomUUID(), nodeId, INSTANCE_HOST, OperationType.RESTART,
                                         lifecycleManager, healthChecker,
                                         retryAttempts, HEALTH_TIMEOUT, TRANSITION_TIMEOUT,
-                                        RingResponse::new);
+                                        () -> ringSupplier.get());
         job.setPollIntervalsForTesting(10, 10);
         return job;
+    }
+
+    private RingResponse ring(String localStatus)
+    {
+        RingResponse ring = new RingResponse();
+        ring.add(new RingEntry.Builder()
+                 .datacenter("dc1")
+                 .rack("rack1")
+                 .status(localStatus)
+                 .state("Normal")
+                 .address(INSTANCE_HOST)
+                 .port(9042)
+                 .token("0")
+                 .load("100 KiB")
+                 .owns("")
+                 .fqdn("localhost")
+                 .hostId(nodeId.toString())
+                 .build());
+        return ring;
     }
 
     private void stubLifecycle(CassandraState initial) throws Exception

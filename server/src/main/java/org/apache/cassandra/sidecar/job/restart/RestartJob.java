@@ -32,6 +32,7 @@ import org.apache.cassandra.sidecar.common.data.Lifecycle.OperationStatus;
 import org.apache.cassandra.sidecar.common.data.OperationType;
 import org.apache.cassandra.sidecar.common.response.LifecycleInfoResponse;
 import org.apache.cassandra.sidecar.common.response.RingResponse;
+import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 import org.apache.cassandra.sidecar.common.server.utils.SecondBoundConfiguration;
 import org.apache.cassandra.sidecar.exceptions.LifecycleTaskConflictException;
 import org.apache.cassandra.sidecar.job.LocalJob;
@@ -243,6 +244,39 @@ public class RestartJob extends LocalJob
         }
     }
 
+    private boolean hasConverged(LifecycleInfoResponse info, CassandraState desiredState)
+    {
+        if (info.status() != OperationStatus.CONVERGED || info.currentState() != desiredState)
+        {
+            return false;
+        }
+        return desiredState == CassandraState.STOPPED || isLocalNodeUpAndNormal();
+    }
+
+    private boolean isLocalNodeUpAndNormal()
+    {
+        RingResponse ring;
+        try
+        {
+            ring = ringSupplier.get();
+        }
+        catch (Exception e)
+        {
+            LOGGER.debug("Could not read the ring while waiting for node {} to be up and normal. operationId={}",
+                         nodeId(), operationId(), e);
+            return false;
+        }
+        String localId = nodeId().toString();
+        for (RingEntry entry : ring)
+        {
+            if (localId.equals(entry.hostId()))
+            {
+                return "Up".equalsIgnoreCase(entry.status()) && "Normal".equalsIgnoreCase(entry.state());
+            }
+        }
+        return false;
+    }
+
     /**
      * Requests a lifecycle state transition and waits for it to converge.
      *
@@ -284,7 +318,7 @@ public class RestartJob extends LocalJob
             try
             {
                 LifecycleInfoResponse info = lifecycleManager.getLifecycleInfo(instanceHost());
-                if (info.status() == OperationStatus.CONVERGED && info.currentState() == desiredState)
+                if (hasConverged(info, desiredState))
                 {
                     return true;
                 }
