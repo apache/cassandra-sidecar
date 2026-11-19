@@ -28,8 +28,7 @@ import org.apache.cassandra.sidecar.common.response.RingResponse;
 import org.apache.cassandra.sidecar.common.response.data.RingEntry;
 
 /**
- * Health checker that consults data replication scope across a cluster. 
- *
+ * Health checker that consults data replication scope across a cluster.
  */
 public class ReplicaScopeHealthChecker implements RingHealthChecker
 {
@@ -80,7 +79,7 @@ public class ReplicaScopeHealthChecker implements RingHealthChecker
     }
 
     /**
-     * Whether {@code entry} could host the same replica as a local node, given the datacenter's replication 
+     * Whether {@code entry} could host the same replica as a local node, given the datacenter's replication
      * scope across all keyspaces.
      */
     private static boolean isPotentialCoReplica(ReplicaScope scope, String localDatacenter, String localRack,

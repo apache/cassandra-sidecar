@@ -147,7 +147,7 @@ public class RestartJob extends LocalJob
         }
         else
         {
-            // The node is already down. Starting an already down node cannot reduce availability, so skip the 
+            // The node is already down. Starting an already down node cannot reduce availability, so skip the
             // health check and stop and start it directly.
             LOGGER.info("Node {} is already down; skipping health check and stop, starting directly. operationId={}",
                         nodeId(), operationId());
@@ -262,7 +262,7 @@ public class RestartJob extends LocalJob
 
         while (System.currentTimeMillis() < deadline)
         {
-            // Cancel only if node state was not updated yet. If a stop or a start was already 
+            // Cancel only if node state was not updated yet. If a stop or a start was already
             // requested, finish it and bring the node back up
             if (desiredState == CassandraState.STOPPED && !transitionRequested && isCancelled())
             {

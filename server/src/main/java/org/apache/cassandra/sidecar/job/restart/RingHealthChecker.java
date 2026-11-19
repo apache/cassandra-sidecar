@@ -28,7 +28,7 @@ import org.apache.cassandra.sidecar.common.response.RingResponse;
 public interface RingHealthChecker
 {
     /**
-     * Determines whether a cluster is healthy enough to take down the given node. 
+     * Determines whether a cluster is healthy enough to take down the given node.
      *
      * @param ring        the current ring state
      * @param localNodeId the host ID of the node to take down

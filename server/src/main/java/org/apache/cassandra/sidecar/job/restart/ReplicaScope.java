@@ -19,25 +19,25 @@
 package org.apache.cassandra.sidecar.job.restart;
 
 /**
- * Describes the data replication scope across a cluster. 
+ * Describes the data replication scope across a cluster.
  */
 public enum ReplicaScope
 {
     /**
-     * All keyspaces use NetworkTopologyStrategy with max RF less than number of racks, meaning separate data replicas 
-     * are never hosted within the same rack. Same-rack parallelism for operations is safe. 
+     * All keyspaces use NetworkTopologyStrategy with max RF at most the number of racks, meaning separate data replicas
+     * are never hosted within the same rack. Same-rack parallelism for operations is safe.
      */
     RACK,
 
     /**
-     * All keyspaces use NetworkTopologyStrategy, but at least one keyspace's RF exceeds the number of 
-     * racks, so a rack can hold more than one replica of a set of data. Co-replicas are confined to the datacenter 
+     * All keyspaces use NetworkTopologyStrategy, but at least one keyspace's RF exceeds the number of
+     * racks, so a rack can hold more than one replica of a set of data. Co-replicas are confined to the datacenter
      * but not to distinct racks.
      */
     DATACENTER,
 
     /**
-     * At least one keyspace does not use NetworkTopologyStrategy (e.g. SimpleStrategy), meaning replicas are hosted by 
+     * At least one keyspace does not use NetworkTopologyStrategy (e.g. SimpleStrategy), meaning replicas are hosted by
      * nodes regardless of rack or DC. A co-replica can be any node in the cluster.
      */
     CLUSTER

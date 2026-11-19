@@ -57,9 +57,9 @@ public class ReplicationStrategyAnalyzer
 
     /**
      * Classifies the replica scope for {@code datacenter}. Returns {@link ReplicaScope#CLUSTER} (the most
-     * conservative scope) if the replication strategy cannot be determined, so an unknown strategy never 
+     * conservative scope) if the replication strategy cannot be determined, so an unknown strategy never
      * allows taking a node down unsafely. LocalStrategy and virtual keyspaces are ignored as their data
-     * is not replicated. 
+     * is not replicated.
      *
      * @param ring       the cluster ring
      * @param datacenter the datacenter being operated on
