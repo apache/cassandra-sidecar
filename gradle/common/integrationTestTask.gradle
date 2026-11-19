@@ -30,7 +30,7 @@ apply from: "${project.rootDir}/gradle/common/java11Options.gradle"
 def getCassandraTarballLocation() {
     def tarballsDirFile = file(tarballsDir)
     if (tarballsDirFile.exists() && tarballsDirFile.isDirectory()) {
-        // the pre-release group matches apache-cassandra-6.0-alpha3-SNAPSHOT-bin.tar.gz
+        // the pre-release group matches apache-cassandra-6.0-alpha2-bin.tar.gz
         def matchingFiles = fileTree(tarballsDirFile).files.findAll {it.name ==~ /^apache-cassandra-${tarballVersion}\.?\d*(-(alpha|beta|rc)\d+)?(-SNAPSHOT){0,1}-bin\.tar.gz$/ }
         if (matchingFiles.size() > 0) {
             // more than one qualifier of the same series can match, so prefer a release over a pre-release

@@ -18,7 +18,6 @@
 
 package org.apache.cassandra.sidecar.adapters.cassandra60;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -98,30 +97,10 @@ public class Cassandra60StorageOperations extends Cassandra50StorageOperations
         requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");
         // SnapshotOptions.userSnapshot reads the map without a null check, so normalise before either route
-        Map<String, String> opts = options != null ? options : Collections.emptyMap();
-        if (snapshotManagerMBeanAbsent.get())
-        {
-            super.takeSnapshot(tag, keyspace, table, opts);
-            return;
-        }
-        try
-        {
-            jmxClient.proxy(SnapshotManagerJmxOperations.class, SNAPSHOT_MANAGER_OBJ_NAME)
-                     .takeSnapshot(tag, opts, keyspace + "." + table);
-        }
-        catch (IOException e)
-        {
-            throw translateSnapshotFailure(e, tag, keyspace, table);
-        }
-        catch (RuntimeException e)
-        {
-            if (isSnapshotManagerMBeanAbsent(e))
-            {
-                super.takeSnapshot(tag, keyspace, table, opts);
-                return;
-            }
-            throw translateRuntimeSnapshotFailure(e, tag, keyspace, table);
-        }
+        Map<String, String> opts = null != options ? options : Collections.emptyMap();
+        viaSnapshotManager(tag, keyspace, table,
+                           snapshotManager -> snapshotManager.takeSnapshot(tag, opts, keyspace + "." + table),
+                           () -> super.takeSnapshot(tag, keyspace, table, opts));
     }
 
     /**
@@ -135,46 +114,44 @@ public class Cassandra60StorageOperations extends Cassandra50StorageOperations
         requireNonNull(tag, "snapshot tag must be non-null");
         requireNonNull(keyspace, "keyspace must be non-null");
         requireNonNull(table, "table must be non-null");
-        if (snapshotManagerMBeanAbsent.get())
-        {
-            clearSnapshotViaStorageService(tag, keyspace, table);
-            return;
-        }
         LOGGER.debug("Table is not supported by Cassandra JMX endpoints. " +
                      "Clearing snapshot with tag={} and keyspace={}; table={} is ignored", tag, keyspace, table);
-        try
-        {
-            jmxClient.proxy(SnapshotManagerJmxOperations.class, SNAPSHOT_MANAGER_OBJ_NAME)
-                     .clearSnapshot(tag, Collections.emptyMap(), keyspace);
-        }
-        catch (IOException e)
-        {
-            throw translateSnapshotFailure(e, tag, keyspace, table);
-        }
-        catch (RuntimeException e)
-        {
-            if (isSnapshotManagerMBeanAbsent(e))
-            {
-                clearSnapshotViaStorageService(tag, keyspace, table);
-                return;
-            }
-            throw translateRuntimeSnapshotFailure(e, tag, keyspace, table);
-        }
+        viaSnapshotManager(tag, keyspace, table,
+                           snapshotManager -> snapshotManager.clearSnapshot(tag, Collections.emptyMap(), keyspace),
+                           () -> super.clearSnapshot(tag, keyspace, table));
     }
 
-    /**
-     * The deprecated method delegates to the same Snapshot Manager, so it raises the same unwrapped failures. The
-     * base implementation does not classify them, so classify here to keep both routes equivalent.
-     */
-    private void clearSnapshotViaStorageService(@NotNull String tag, @NotNull String keyspace, @NotNull String table)
+    private void viaSnapshotManager(String tag, String keyspace, String table,
+                                    ThrowableUtils.Consumer<SnapshotManagerJmxOperations> operation,
+                                    Runnable fallback)
     {
         try
         {
-            super.clearSnapshot(tag, keyspace, table);
+            if (!snapshotManagerMBeanAbsent.get())
+            {
+                try
+                {
+                    operation.accept(jmxClient.proxy(SnapshotManagerJmxOperations.class, SNAPSHOT_MANAGER_OBJ_NAME));
+                    return;
+                }
+                catch (RuntimeException e)
+                {
+                    if (!isSnapshotManagerMBeanAbsent(e))
+                    {
+                        throw e;
+                    }
+                }
+            }
+            fallback.run();
         }
-        catch (RuntimeException e)
+        catch (Exception e)
         {
-            throw translateRuntimeSnapshotFailure(e, tag, keyspace, table);
+            RuntimeException translated = classifySnapshotFailure(e, tag, keyspace, table);
+            if (null != translated)
+            {
+                throw translated;
+            }
+            throw e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
         }
     }
 
@@ -185,7 +162,7 @@ public class Cassandra60StorageOperations extends Cassandra50StorageOperations
      */
     private boolean isSnapshotManagerMBeanAbsent(@NotNull RuntimeException e)
     {
-        if (ThrowableUtils.getCause(e, InstanceNotFoundException.class) == null)
+        if (null == ThrowableUtils.getCause(e, InstanceNotFoundException.class))
         {
             return false;
         }
@@ -197,18 +174,10 @@ public class Cassandra60StorageOperations extends Cassandra50StorageOperations
         return true;
     }
 
-    /**
-     * {@code SnapshotManager.clearSnapshot} declares {@link IOException} but does not wrap its failures, so the
-     * JMX proxy raises the original {@link RuntimeException}.
-     *
-     * @return the exception to throw, which is {@code e} itself when it is not a known snapshot failure
-     */
-    private RuntimeException translateRuntimeSnapshotFailure(@NotNull RuntimeException e,
-                                                            @NotNull String tag,
-                                                            @NotNull String keyspace,
-                                                            @NotNull String table)
+    @Override
+    protected boolean messageContains(@NotNull Throwable throwable, @NotNull String text)
     {
-        RuntimeException translated = classifySnapshotFailure(e, tag, keyspace, table);
-        return translated != null ? translated : e;
+        // 6.0 can leave the snapshot task failure message only in the cause.
+        return null != ThrowableUtils.getCause(throwable, t -> null != t.getMessage() && t.getMessage().contains(text));
     }
 }

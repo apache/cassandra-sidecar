@@ -322,9 +322,9 @@ While Sidecar includes a built-in schema store, you can integrate with external 
 Testing
 -------
 
-The test framework is set up to run 4.1 and 5.1 (Trunk) tests (see `TestVersionSupplier.java`) by default.
+The test framework is set up to run 4.1 and 6.0 tests (see `TestVersionSupplier.java`) by default.
 You can change this via the Java property `cassandra.sidecar.versions_to_test` by supplying a comma-delimited string.
-For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,5.1`.
+For example, `-Dcassandra.sidecar.versions_to_test=4.0,4.1,6.0`.
 
 CircleCI Testing
 -----------------

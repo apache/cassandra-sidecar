@@ -141,9 +141,9 @@ public class CassandraStorageOperations implements StorageOperations
      * @return the exception to throw for a snapshot JMX failure
      */
     protected RuntimeException translateSnapshotFailure(@NotNull IOException e,
-                                                       @NotNull String tag,
-                                                       @NotNull String keyspace,
-                                                       @NotNull String table)
+                                                        @NotNull String tag,
+                                                        @NotNull String keyspace,
+                                                        @NotNull String table)
     {
         RuntimeException translated = classifySnapshotFailure(e, tag, keyspace, table);
         return translated != null ? translated : new RuntimeException(e);
@@ -154,9 +154,9 @@ public class CassandraStorageOperations implements StorageOperations
      * matches no known snapshot failure, which lets the caller decide what to throw
      */
     protected @Nullable RuntimeException classifySnapshotFailure(@NotNull Exception e,
-                                                                @NotNull String tag,
-                                                                @NotNull String keyspace,
-                                                                @NotNull String table)
+                                                                 @NotNull String tag,
+                                                                 @NotNull String keyspace,
+                                                                 @NotNull String table)
     {
         // post-5.0 wraps in IOException what earlier releases threw directly, so unwrap first
         IllegalArgumentException iex = ThrowableUtils.getCause(e, IllegalArgumentException.class);
@@ -164,7 +164,6 @@ public class CassandraStorageOperations implements StorageOperations
         {
             return iex;
         }
-        // 6.0 wraps a snapshot task failure without carrying its message forward, so search the whole chain
         if (messageContains(e, "Snapshot " + tag + " already exists") ||
             messageContains(e, "Snapshot " + tag + " for " + keyspace + "." + table + " already exists"))
         {
@@ -181,9 +180,9 @@ public class CassandraStorageOperations implements StorageOperations
         return null;
     }
 
-    private static boolean messageContains(@NotNull Throwable throwable, @NotNull String text)
+    protected boolean messageContains(@NotNull Throwable throwable, @NotNull String text)
     {
-        return ThrowableUtils.getCause(throwable, t -> t.getMessage() != null && t.getMessage().contains(text)) != null;
+        return null != throwable.getMessage() && throwable.getMessage().contains(text);
     }
 
     /**

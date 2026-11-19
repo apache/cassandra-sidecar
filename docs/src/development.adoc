@@ -32,7 +32,7 @@ below it and overrides only the operations that the release changed.  `Cassandra
 selects the module whose `@MinimumVersion` is the highest one at or below the release version that the
 node reports.
 
-Cassandra 6.0 changes four surfaces that the Sidecar reads:
+Cassandra 6.0 changes three surfaces that the Sidecar reads:
 
 * Snapshot methods on `StorageServiceMBean` are deprecated in favour of the
   `org.apache.cassandra.service.snapshot:type=SnapshotManager` MBean, so `Cassandra60StorageOperations`
@@ -41,9 +41,6 @@ Cassandra 6.0 changes four surfaces that the Sidecar reads:
   both.  Only `CassandraDaemon` registers that MBean, and the in-JVM dtest node does not, so
   `Cassandra60StorageOperations` catches `InstanceNotFoundException` and uses the deprecated Storage Service
   MBean methods instead.
-* CASSANDRA-21539 removed the `hostname` column from `system_views.clients`, to avoid one DNS lookup per
-  row.  `ConnectedClientStats` reads that column only when it is present, so its `hostname` is null on 6.0.
-  The connected clients response never carried that value, so API consumers see no change.
 * 6.0 adds the `authentication_mode` column to `system_views.clients`, so the connected clients response
   carries that field on 6.0 and null below it.
 * Under CEP-21, `Gossiper` takes the gossiped release version from cluster metadata rather than from the

@@ -22,8 +22,7 @@ CANDIDATE_BRANCHES=(
   "cassandra-4.0:ec3b425c38d92d20d77d3a87c782ed9c072e1cd9"
   "cassandra-4.1:2d0fda4511003c883a6a682c1572f749f6d8da10"
   "cassandra-5.0:6fd83986e91a3ce369d1f2d01a04c8c68c319ae3"
-  # cassandra-6.0 is pre-release (base.version 6.0-alpha3), so refresh this sha as the branch moves
-  "cassandra-6.0:74d32dc66f22a047f3f16d9b99d62840cdad8fef"
+  "cassandra-6.0:cassandra-6.0-alpha2"
   # trunk is 7.0. No CI job consumes a 7.0 jar until a 7.0 adapter exists; build it with BRANCHES=trunk
   "trunk:b20985d744984304434d2713faa59b4a6f766174"
 )

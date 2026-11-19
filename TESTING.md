@@ -59,7 +59,7 @@ Example with custom branches:
 BRANCHES="cassandra-4.1 cassandra-6.0" ./scripts/build-dtest-jars.sh
 ```
 
-`cassandra-6.0` is pre-release, so its dtest jar and tarball carry the `6.0-alpha3` qualifier.
+`cassandra-6.0` is pre-release, so its dtest jar and tarball carry the `6.0-alpha2` qualifier.
 `trunk` is Cassandra 7.0. It stays in `CANDIDATE_BRANCHES` and builds with `BRANCHES="trunk"`, but no
 test job uses it until a 7.0 adapter exists.
 

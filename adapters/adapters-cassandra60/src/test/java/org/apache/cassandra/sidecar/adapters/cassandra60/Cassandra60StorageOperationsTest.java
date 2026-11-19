@@ -28,6 +28,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import org.apache.cassandra.sidecar.adapters.base.jmx.StorageJmxOperations;
+import org.apache.cassandra.sidecar.adapters.cassandra50.Cassandra50StorageOperations;
 import org.apache.cassandra.sidecar.adapters.cassandra60.jmx.SnapshotManagerJmxOperations;
 import org.apache.cassandra.sidecar.common.server.JmxClient;
 import org.apache.cassandra.sidecar.common.server.dns.DnsResolver;
@@ -220,6 +221,38 @@ class Cassandra60StorageOperationsTest
         verify(mockSnapshotManager, never()).takeSnapshot(TAG, Collections.emptyMap(), KEYSPACE + "." + TABLE);
         verify(mockStorageService, times(2)).clearSnapshot(TAG, KEYSPACE);
         verify(mockStorageService, times(1)).takeSnapshot(TAG, Collections.emptyMap(), KEYSPACE + "." + TABLE);
+    }
+
+    @Test
+    void testEarlierVersionsDoNotClassifyMessagesOnlyInTheCause() throws IOException
+    {
+        IOException wrapped = new IOException("Snapshot task failed",
+                                              new RuntimeException("Snapshot " + TAG + " already exists"));
+        doThrow(wrapped).when(mockStorageService).takeSnapshot(TAG, Collections.emptyMap(), KEYSPACE + "." + TABLE);
+        Cassandra50StorageOperations earlier = new Cassandra50StorageOperations(mockJmxClient, mock(DnsResolver.class));
+
+        assertThatThrownBy(() -> earlier.takeSnapshot(TAG, KEYSPACE, TABLE, Collections.emptyMap()))
+        .isExactlyInstanceOf(RuntimeException.class)
+        .hasCause(wrapped);
+    }
+
+    @Test
+    void testFallbackClassifiesFailuresOnFirstAndLaterCalls() throws IOException
+    {
+        doThrow(mBeanAbsentFailure())
+        .when(mockSnapshotManager).clearSnapshot(TAG, Collections.emptyMap(), KEYSPACE);
+        RuntimeException wrapped = new RuntimeException("Snapshot task failed",
+                                                        new RuntimeException("Keyspace " + KEYSPACE + " does not exist"));
+        doThrow(wrapped).when(mockStorageService).clearSnapshot(TAG, KEYSPACE);
+        doThrow(new IOException("Snapshot task failed", wrapped))
+        .when(mockStorageService).takeSnapshot(TAG, Collections.emptyMap(), KEYSPACE + "." + TABLE);
+
+        assertThatThrownBy(() -> storageOperations.clearSnapshot(TAG, KEYSPACE, TABLE))
+        .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> storageOperations.clearSnapshot(TAG, KEYSPACE, TABLE))
+        .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> storageOperations.takeSnapshot(TAG, KEYSPACE, TABLE, null))
+        .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
