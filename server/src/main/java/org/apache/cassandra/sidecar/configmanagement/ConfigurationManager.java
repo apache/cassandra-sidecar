@@ -44,12 +44,20 @@ public class ConfigurationManager
     private volatile ConfigurationOverlaySnapshot cachedBaseSnapshot;
 
     /**
-     * @param provider         the configuration provider for fetching overlays
+     * @param provider           the configuration provider for fetching overlays
      * @param baseTemplatePath path to the base cassandra.yaml template, or {@code null} for an empty base
+     * @param configurationStore path to the configuration store directory
+     * @param failurePolicy      the failure policy to apply when the provider is unavailable
      */
-    public ConfigurationManager(ConfigurationProvider provider, @Nullable Path baseTemplatePath)
+    public ConfigurationManager(ConfigurationProvider provider,
+                                @Nullable Path baseTemplatePath,
+                                Path configurationStore,
+                                FailurePolicy failurePolicy)
     {
-        this.provider = Objects.requireNonNull(provider, "provider must not be null");
+        Objects.requireNonNull(provider, "provider must not be null");
+        Objects.requireNonNull(configurationStore, "configurationStore must not be null");
+        Objects.requireNonNull(failurePolicy, "failurePolicy must not be null");
+        this.provider = FailurePolicyWrapper.wrap(provider, configurationStore, failurePolicy);
         this.baseTemplatePath = baseTemplatePath;
     }
 
@@ -69,6 +77,12 @@ public class ConfigurationManager
         try
         {
             providerSnapshot = provider.getOverlay(instance);
+        }
+        catch (ConfigurationManagerException e)
+        {
+            // Preserve the subtype (e.g. ConfigurationProviderUnavailableException) so handlers can
+            // map it to the appropriate HTTP status (e.g. 503) rather than a generic 500.
+            throw e;
         }
         catch (Exception e)
         {
