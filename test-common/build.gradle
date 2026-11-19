@@ -24,7 +24,8 @@ plugins {
 
 version project.version
 
-ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.11.jar" // latest supported Cassandra build is 5.1
+// Compile classpath of the test fixtures only; it does not limit the versions under test
+ext.dtestJar = System.getenv("DTEST_JAR") ?: "dtest-4.1.11.jar"
 def dtestJarFullPath = "${dependencyLocation}${ext.dtestJar}"
 File dtestJarFile = new File(dtestJarFullPath)
 println("Using DTest jar: " + dtestJarFullPath + "; present? " + dtestJarFile.exists())

@@ -205,7 +205,7 @@ public class CassandraAdapter implements ICassandraAdapter
     @Override
     public String toString()
     {
-        return "CassandraAdapter" + "@" + Integer.toHexString(hashCode());
+        return getClass().getSimpleName() + "@" + Integer.toHexString(hashCode());
     }
 
     @NotNull
