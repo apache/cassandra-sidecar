@@ -46,7 +46,7 @@ dependencies {
     implementation(group: 'io.vertx', name: 'vertx-junit5', version: "$vertxVersion")
     implementation(group: 'io.vertx', name: 'vertx-codegen', version: "$vertxVersion")
     testImplementation(group: 'org.assertj', name: 'assertj-core', version: '3.26.3')
-    testImplementation(group: 'org.mockito', name: 'mockito-core', version: '4.11.0')
+    testImplementation(group: 'org.mockito', name: 'mockito-core', version: '5.20.0')
     testFixturesApi(group: 'org.bouncycastle', name: 'bcpkix-jdk18on', version: '1.78.1')
     testImplementation(testFixtures(project(path: ":test-common")))
 }
